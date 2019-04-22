@@ -10,8 +10,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Data
 @AllArgsConstructor
@@ -23,13 +25,18 @@ public class ScoreboardConfiguration {
     private List<String> lines;
 
     public void show(Player player) {
-        ScoreboardUtils.rankedSidebarDisplay(player, displayName, lines.stream()
-                .filter(string -> !string.isEmpty())
-                .map(string -> ChatColor.translateAlternateColorCodes('&', string))
-                .map(string -> PlaceholderAPI.setPlaceholders(player, string))
-                .collect(Collectors.toMap(
-                        String::toString, string -> lines.indexOf(string)
-                )));
+        HashMap<String, Integer> stringHashMap = new HashMap<>();
+        ArrayList<String> strings = new ArrayList<>(lines);
+        Collections.reverse(strings);
+        for (String line : strings) {
+            int index = strings.indexOf(line);
+            if (!line.isEmpty()) {
+                line = ChatColor.translateAlternateColorCodes('&', line);
+                line = PlaceholderAPI.setPlaceholders(player, line);
+                stringHashMap.put(line, index + 1);
+            }
+        }
+        ScoreboardUtils.rankedSidebarDisplay(player, displayName, stringHashMap);
     }
 
     public void hide(Player player) {

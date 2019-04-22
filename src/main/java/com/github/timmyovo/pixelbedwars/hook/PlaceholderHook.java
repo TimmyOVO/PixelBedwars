@@ -3,10 +3,10 @@ package com.github.timmyovo.pixelbedwars.hook;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
 import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
-import com.github.timmyovo.pixelbedwars.game.GamePlayer;
 import com.github.timmyovo.pixelbedwars.game.GameTeam;
 import com.github.timmyovo.pixelbedwars.settings.Language;
 import me.clip.placeholderapi.external.EZPlaceholderHook;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -22,6 +22,12 @@ public class PlaceholderHook extends EZPlaceholderHook {
     public String onPlaceholderRequest(Player player, String s) {
         Language language = PixelBedwars.getPixelBedwars().getLanguage();
         BedwarsGame bedwarsGame = PixelBedwars.getPixelBedwars().getBedwarsGame();
+        if (s.equalsIgnoreCase("nextstage")) {
+            return "绿宝石生成点Ⅰ级";
+        }
+        if (s.equalsIgnoreCase("nextstage_time")) {
+            return "2:13";
+        }
         if (s.equalsIgnoreCase("waittime")) {
             return String.valueOf(bedwarsGame.getGameStartCounter());
         }
@@ -33,9 +39,6 @@ public class PlaceholderHook extends EZPlaceholderHook {
         }
         if (s.equalsIgnoreCase("time")) {
             return String.valueOf(bedwarsGame.getGameTimeCounter());
-        }
-        if (s.equalsIgnoreCase("respawntime")) {
-            return String.valueOf(bedwarsGame.getPlayerRespawnCounter());
         }
         if (s.equalsIgnoreCase("kd")) {
             PlayerStatisticModel playerStatistic = PixelBedwars.getPixelBedwars().getPlayerStatistic(player);
@@ -68,14 +71,18 @@ public class PlaceholderHook extends EZPlaceholderHook {
             if (s.contains("#")) {
                 String[] split = s.split("#");
                 try {
-                    Integer integer = Integer.valueOf(split[1]);
-                    GamePlayer gamePlayer = bedwarsGame.getBedwarsPlayer(player);
-                    if (gamePlayer == null) {
-                        return "#ERROR";
+                    String teamName = split[1];
+                    GameTeam teamByName = bedwarsGame.getTeamByName(teamName);
+                    if (bedwarsGame.isTeamDead(teamByName)) {
+                        return "§l" + ChatColor.RED + "✘";
                     }
-
-                } catch (NumberFormatException e) {
-                    e.printStackTrace();
+                    if (teamByName.isBedDestroyed()) {
+                        return "§l" + ChatColor.GREEN + String.valueOf(teamByName.getAlivePlayers().size());
+                    } else {
+                        return "§l" + ChatColor.GREEN + "✔";
+                    }
+                } catch (NullPointerException e) {
+                    return "#ERROR_WHEN_FIND_TEAM";
                 }
             }
         }
@@ -99,6 +106,9 @@ public class PlaceholderHook extends EZPlaceholderHook {
                     return "#ERROR_GETTING_FIELD";
                 }
             }
+            //todo 写完阶段刷新
+            //todo 写完商店系统
+            //todo 写完阶段变量
         }
         return null;
     }

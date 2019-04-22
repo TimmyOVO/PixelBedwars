@@ -4,11 +4,8 @@ import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.settings.Language;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import com.google.common.collect.ImmutableMap;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.apache.commons.lang.Validate;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Team;
@@ -17,7 +14,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(of = {"teamMeta"})
 @AllArgsConstructor
 @NoArgsConstructor
 public class GameTeam {
@@ -55,10 +54,12 @@ public class GameTeam {
     }
 
     public List<GamePlayer> getTeamPlayers() {
-        return getTeam().getEntries().stream()
-                .map(Bukkit::getPlayer)
-                .filter(Objects::nonNull)
-                .map(bedwarsGame::getBedwarsPlayer)
+        return getBedwarsGame().getGamePlayers()
+                .stream()
+                .filter(gamePlayer -> {
+                    GameTeam playerTeam = bedwarsGame.getPlayerTeam(gamePlayer);
+                    return playerTeam.equals(this);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -72,4 +73,6 @@ public class GameTeam {
     public boolean isBedDestroyed() {
         return getTeamMeta().getTeamBedLocation().toBukkitLocation().getBlock().getType() != Material.BED_BLOCK;
     }
+
+
 }

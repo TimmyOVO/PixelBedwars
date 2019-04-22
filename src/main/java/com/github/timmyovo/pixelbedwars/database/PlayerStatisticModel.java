@@ -11,13 +11,15 @@ import java.util.UUID;
 
 @Entity
 @Data
-@Table(name = "battle_player_statistic")
+@Table(name = "pixelbedwars_statistic")
 @AllArgsConstructor
 @NoArgsConstructor
 public class PlayerStatisticModel {
     @Id
     private UUID uuid;
     private int kills;
+    private int finalKills;
+    private int bedDestroy;
     private int death;
     private int win;
     private int fail;

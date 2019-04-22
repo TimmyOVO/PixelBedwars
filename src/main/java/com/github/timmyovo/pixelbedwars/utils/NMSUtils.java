@@ -1,9 +1,12 @@
 package com.github.timmyovo.pixelbedwars.utils;
 
+import com.github.skystardust.ultracore.bukkit.modules.item.ItemFactory;
 import com.google.common.collect.ImmutableMap;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.minecraft.server.v1_8_R3.*;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_8_R3.inventory.CraftItemStack;
@@ -14,6 +17,7 @@ import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.projectiles.ProjectileSource;
 
 import java.lang.reflect.Field;
@@ -153,5 +157,25 @@ public class NMSUtils {
 
     public static boolean isNumber(String string) {
         return false;
+    }
+
+    public static ItemStack fixItemStackMeta(ItemStack itemStack) {
+        try {
+            CraftItemStack craftItemStack = (CraftItemStack) itemStack;
+            Field declaredField = craftItemStack.getClass().getDeclaredField("handle");
+            declaredField.setAccessible(true);
+            net.minecraft.server.v1_8_R3.ItemStack stack = (net.minecraft.server.v1_8_R3.ItemStack) declaredField.get(craftItemStack);
+            ItemMeta itemMeta = CraftItemStack.getItemMeta(stack);
+            return new ItemFactory(() -> new ItemStack(itemStack.getType()))
+                    .setItemMeta(itemMeta)
+                    .pack();
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return itemStack;
+    }
+
+    public static Location locationFromBlockPosition(World world, BlockPosition blockPosition) {
+        return new Location(world, blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
     }
 }

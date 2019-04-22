@@ -5,15 +5,15 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Scoreboard;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class ScoreboardUtils {
     public static boolean rankedSidebarDisplay(Player p, String title, Map<String, Integer> elements) {
-        title = ChatColor.translateAlternateColorCodes('&', title);
+        /*title = ChatColor.translateAlternateColorCodes('&', title);
         title = cutRankedTitle(title);
         elements = cutRanked(elements);
         Scoreboard scoreboard;
@@ -34,8 +34,8 @@ public class ScoreboardUtils {
         for (Map.Entry<String, Integer> stringIntegerEntry : elements.entrySet()) {
             objective.getScore(stringIntegerEntry.getKey()).setScore(stringIntegerEntry.getValue());
         }
-        return true;
-        /*try {
+        return true;*/
+        try {
             title = ChatColor.translateAlternateColorCodes('&', title);
             title = cutRankedTitle(title);
             elements = cutRanked(elements);
@@ -63,7 +63,7 @@ public class ScoreboardUtils {
         } catch (Exception e) {
             e.printStackTrace();
             return false;
-        }*/
+        }
     }
 
     public static String cutRankedTitle(String title) {
@@ -95,10 +95,10 @@ public class ScoreboardUtils {
 
         for (String string : new ArrayList<>(elements.keySet()))
             if (string != null)
-                if (string.length() > 16) {
+                if (string.length() > 32) {
                     int value = elements.get(string);
                     elements.remove(string);
-                    elements.put(string.substring(0, 16), value);
+                    elements.put(string.substring(0, 32), value);
                 }
 
         return elements;
