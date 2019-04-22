@@ -16,12 +16,14 @@ public class GamePlayer {
     private int kills;
     private int death;
     private boolean respawning;
+    private boolean totallyDeath;
 
     public GamePlayer(Player player) {
         this.player = player;
         this.kills = 0;
         this.death = 0;
         this.respawning = false;
+        this.totallyDeath = false;
     }
 
     public void addDeath() {

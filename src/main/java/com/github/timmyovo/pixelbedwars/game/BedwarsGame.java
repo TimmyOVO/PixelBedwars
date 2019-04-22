@@ -10,6 +10,7 @@ import com.github.timmyovo.pixelbedwars.entity.Corpses;
 import com.github.timmyovo.pixelbedwars.entity.CorpsesManager;
 import com.github.timmyovo.pixelbedwars.settings.GameSetting;
 import com.github.timmyovo.pixelbedwars.settings.Language;
+import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteArrayDataOutput;
@@ -74,7 +75,7 @@ public class BedwarsGame implements Listener {
     private int playerRespawnCounter;
     private Language language;
 
-    public void loadGame(GameSetting gameSetting) {
+    public BedwarsGame loadGame(GameSetting gameSetting) {
         this.gameState = GameState.LOADING;
         this.gameSetting = gameSetting;
         this.language = PixelBedwars.getPixelBedwars().getLanguage();
@@ -82,7 +83,7 @@ public class BedwarsGame implements Listener {
         Bukkit.getWorlds().forEach(world -> {
             world.setGameRuleValue("doDaylightCycle", gameSetting.isDisableTimeCycle() ? "false" : "true");
         });
-        Location location = gameSetting.getMapWorldCenter().toBukkitLocation();
+        Location location = gameSetting.getPlayerRespawnWaitLocation().toBukkitLocation();
         checkChunk(location);
         location.getWorld().getWorldBorder().reset();
         this.teamList = gameSetting.getTeamMetaList()
@@ -92,7 +93,7 @@ public class BedwarsGame implements Listener {
                     team.setAllowFriendlyFire(false);
                     team.setPrefix(teamMeta.getTeamColor() + teamMeta.getTeamName());
                     team.setNameTagVisibility(NameTagVisibility.ALWAYS);
-                    return new GameTeam(teamMeta, team);
+                    return new GameTeam(this, teamMeta, team);
                 })
                 .collect(Collectors.toList());
         this.gameStartCounter = gameSetting.getWaitTime();
@@ -192,13 +193,15 @@ public class BedwarsGame implements Listener {
                         .forEach(player -> {
                             sendActionbar(player, language.getGamingActionbar());
                         });
+                getTeamList().stream()
+                        .map(GameTeam::getTeamMeta)
+                        .forEach(TeamMeta::tickSpawner);
                 updateScoreboard();
-
-
             }
         }.runTaskTimer(PixelBedwars.getPixelBedwars(), 0L, 10L);
         Bukkit.getPluginManager().registerEvents(this, PixelBedwars.getPixelBedwars());
         this.gameState = GameState.WAITING;
+        return this;
     }
 
     private void sendActionbar(Player player, String s) {
@@ -224,11 +227,10 @@ public class BedwarsGame implements Listener {
         if (gameState != GameState.WAITING) {
             return;
         }
-        Location borderCenterLocation = gameSetting.getMapWorldCenter().toBukkitLocation();
+        Location borderCenterLocation = gameSetting.getPlayerRespawnWaitLocation().toBukkitLocation();
         checkChunk(borderCenterLocation);
         WorldBorder worldBorder = borderCenterLocation.getWorld().getWorldBorder();
         worldBorder.setCenter(borderCenterLocation);
-        worldBorder.setSize(gameSetting.getBorderSize());
         this.getGamePlayers().forEach(gamePlayer -> {
             Player player = gamePlayer.getPlayer();
             if (getPlayerTeam(gamePlayer.getPlayer()) == null) {
@@ -249,11 +251,11 @@ public class BedwarsGame implements Listener {
     }
 
     private void randomPlayerInventoryItem(Player player) {
-        gameSetting.getRandomInventoryItemListList().stream()
+        /*gameSetting.getRandomInventoryItemListList().stream()
                 .filter(randomInventoryItem -> new Random().nextInt(100) <= randomInventoryItem.getChance())
                 .forEach(randomInventoryItem -> randomInventoryItem.getRandomInventoryItemList().forEach(rr -> {
                     player.getInventory().addItem(rr.getInventoryItem().toItemStack());
-                }));
+                }));*/
     }
 
     public void endGame() {
@@ -295,7 +297,7 @@ public class BedwarsGame implements Listener {
                             .stream()
                             .map(Bukkit::getPlayer)
                             .filter(Objects::nonNull)
-                            .map(this::getBattlePlayer)
+                            .map(this::getBedwarsPlayer)
                             .filter(Objects::nonNull)
                             .mapToInt(GamePlayer::getKills)
                             .sum())).orElseThrow(IllegalAccessException::new);
@@ -375,8 +377,12 @@ public class BedwarsGame implements Listener {
 
     public void playerLeave(Player player) {
         broadcastMessage(language.getPlayerQuitMessage(), ImmutableMap.of("%player%", player.getDisplayName()));
-        gamePlayers.remove(getBattlePlayer(player));
-        getPlayerTeam(player).removePlayer(player);
+        gamePlayers.remove(getBedwarsPlayer(player));
+        GameTeam playerTeam = getPlayerTeam(player);
+        if (playerTeam == null) {
+            return;
+        }
+        playerTeam.removePlayer(player);
         resetPlayer(player);
     }
 
@@ -392,17 +398,27 @@ public class BedwarsGame implements Listener {
     }
 
     public Location playerRespawn(Player player) {
-        List<VecLoc3D> randomSpawnLocations = gameSetting.getRandomSpawnLocations();
-        Collections.shuffle(randomSpawnLocations);
-        return randomSpawnLocations.get(0).toBukkitLocation();
+        return getPlayerTeam(player).getTeamMeta().getTeamGameLocation().toBukkitLocation();
     }
 
-    public void playerDeath(Player player) {
-        GamePlayer gamePlayer = getBattlePlayer(player);
+    public boolean playerDeath(Player player) {
+        GamePlayer gamePlayer = getBedwarsPlayer(player);
         if (gamePlayer == null) {
-            return;
+            return true;
+        }
+        if (!canPlayerRespawn(gamePlayer)) {
+            gamePlayer.setTotallyDeath(true);
         }
         gamePlayer.addDeath();
+        return gamePlayer.isTotallyDeath();
+    }
+
+    private boolean canPlayerRespawn(GamePlayer player) {
+        return getPlayerTeam(player.getPlayer()).isBedDestroyed();
+    }
+
+    public boolean isTeamDead(GameTeam gameTeam) {
+        return gameTeam.getAlivePlayers().size() == 0;
     }
 
     public boolean hasPlayer(Player player) {
@@ -429,7 +445,7 @@ public class BedwarsGame implements Listener {
         return player.hasMetadata("Invulnerability") && player.getMetadata("Invulnerability").get(0).asBoolean();
     }
 
-    public GamePlayer getBattlePlayer(Player player) {
+    public GamePlayer getBedwarsPlayer(Player player) {
         return this.getGamePlayers().stream()
                 .filter(gamePlayer -> gamePlayer.isPlayerEqual(player))
                 .findAny()
@@ -491,7 +507,11 @@ public class BedwarsGame implements Listener {
         return getTeamList().stream()
                 .filter(gameTeam -> gameTeam.getTeam().getSize() >= 1)
                 .collect(Collectors.toList())
-                .size() >= 2;
+                .size() >= 2 && getAliveTeams() >= 2;
+    }
+
+    private int getAliveTeams() {
+        return (int) getTeamList().stream().filter(team -> !isTeamDead(team)).count();
     }
 
     public void updateScoreboard() {
@@ -517,13 +537,13 @@ public class BedwarsGame implements Listener {
     public void onPlayerDeath(PlayerDeathEvent playerDeathEvent) {
         Player entity = playerDeathEvent.getEntity();
         if (hasPlayer(entity)) {
-            GamePlayer gamePlayer = getBattlePlayer(entity);
+            GamePlayer gamePlayer = getBedwarsPlayer(entity);
             gamePlayer.addDeath();
             EntityLiving lastDamager = ((CraftPlayer) gamePlayer.getPlayer()).getHandle().lastDamager;
             if (lastDamager != null) {
                 if (lastDamager instanceof EntityPlayer) {
                     CraftPlayer bukkitEntity = (CraftPlayer) lastDamager.getBukkitEntity();
-                    GamePlayer player = getBattlePlayer(bukkitEntity);
+                    GamePlayer player = getBedwarsPlayer(bukkitEntity);
                     if (player != null) {
                         player.addKill();
                         broadcastMessage(language.getPlayerKillOthersMessage(), ImmutableMap.of("%killer%", player.getPlayer().getDisplayName(), "%player%", entity.getDisplayName()));
@@ -533,7 +553,7 @@ public class BedwarsGame implements Listener {
                 broadcastMessage(language.getPlayerSuicideMessage(), ImmutableMap.of("%player%", entity.getDisplayName()));
             }
 
-            playerDeath(entity);
+
             PixelBedwars pixelBedwars = PixelBedwars.getPixelBedwars();
             if (gameSetting.isPlayerCorpseEnable()) {
                 PlayerInventory i1 = entity.getInventory();
@@ -544,6 +564,9 @@ public class BedwarsGame implements Listener {
                 Bukkit.getScheduler().runTaskLater(pixelBedwars, () -> {
                     pixelBedwars.getCorpsesManager().removeCorpse(corpseData);
                 }, gameSetting.getPlayerCorpseDespawnRate() * 20L);
+            }
+            if (playerDeath(entity)) {
+
             }
             entity.spigot().respawn();
         }
@@ -558,7 +581,7 @@ public class BedwarsGame implements Listener {
         player.setMaxHealth(gameSetting.getPlayerMaxHealth());
         CorpsesManager corpsesManager = PixelBedwars.getPixelBedwars()
                 .getCorpsesManager();
-        getBattlePlayer(player).setRespawning(false);
+        getBedwarsPlayer(player).setRespawning(false);
         randomPlayerInventoryItem(player);
         //todo 发送复活消息
     }
@@ -642,7 +665,7 @@ public class BedwarsGame implements Listener {
         GameTeam gameTeam = collect.stream()
                 .min(Comparator.comparingInt(team -> team.getTeam().getSize()))
                 .orElse(teamList.get(0));
-        GamePlayer gamePlayer = getBattlePlayer(player);
+        GamePlayer gamePlayer = getBedwarsPlayer(player);
         if (gamePlayer == null) {
             return;
         }
@@ -688,11 +711,16 @@ public class BedwarsGame implements Listener {
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent playerRespawnEvent) {
         Player player = playerRespawnEvent.getPlayer();
-        GamePlayer gamePlayer = getBattlePlayer(player);
+        GamePlayer gamePlayer = getBedwarsPlayer(player);
         if (gamePlayer != null) {
-            gamePlayer.setRespawning(true);
+            if (!gamePlayer.isTotallyDeath()) {
+                gamePlayer.setRespawning(true);
+            }
             player.setGameMode(GameMode.SPECTATOR);
-            playerRespawnEvent.setRespawnLocation(gameSetting.getMapWorldCenter().toBukkitLocation());
+            playerRespawnEvent.setRespawnLocation(gameSetting.getPlayerRespawnWaitLocation().toBukkitLocation());
+            if (!canGameContinue()) {
+                endGame();
+            }
         }
     }
 
@@ -747,16 +775,13 @@ public class BedwarsGame implements Listener {
 
     @EventHandler
     public void onPlayerFoodLevelChange(FoodLevelChangeEvent foodLevelChangeEvent) {
-        Player entity = (Player) foodLevelChangeEvent.getEntity();
-        if (isInvulnerability(entity)) {
-            foodLevelChangeEvent.setCancelled(true);
-        }
+        foodLevelChangeEvent.setCancelled(true);
     }
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent playerInteractEvent) {
         Player player = playerInteractEvent.getPlayer();
-        GamePlayer gamePlayer = getBattlePlayer(player);
+        GamePlayer gamePlayer = getBedwarsPlayer(player);
         if (gamePlayer == null) {
             return;
         }

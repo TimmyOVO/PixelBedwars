@@ -2,7 +2,6 @@ package com.github.timmyovo.pixelbedwars;
 
 import com.github.skystardust.ultracore.bukkit.commands.MainCommandSpec;
 import com.github.skystardust.ultracore.bukkit.commands.SubCommandSpec;
-import com.github.skystardust.ultracore.bukkit.models.InventoryItem;
 import com.github.skystardust.ultracore.bukkit.models.VecLoc3D;
 import com.github.skystardust.ultracore.bukkit.modules.inventory.InventoryBuilder;
 import com.github.skystardust.ultracore.bukkit.modules.item.ItemFactory;
@@ -14,26 +13,31 @@ import com.github.skystardust.ultracore.core.database.newgen.DatabaseManager;
 import com.github.skystardust.ultracore.core.exceptions.ConfigurationException;
 import com.github.skystardust.ultracore.core.exceptions.DatabaseInitException;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
+import com.github.timmyovo.pixelbedwars.entity.BedwarsEnderDragon;
 import com.github.timmyovo.pixelbedwars.entity.CorpsesManager;
 import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
-import com.github.timmyovo.pixelbedwars.hook.PlaceholderAPI;
+import com.github.timmyovo.pixelbedwars.hook.PlaceholderHook;
 import com.github.timmyovo.pixelbedwars.settings.GameSetting;
 import com.github.timmyovo.pixelbedwars.settings.Language;
 import com.github.timmyovo.pixelbedwars.settings.ScoreboardConfiguration;
-import com.github.timmyovo.pixelbedwars.settings.item.RandomInventoryItem;
-import com.github.timmyovo.pixelbedwars.settings.item.RandomInventoryItemList;
+import com.github.timmyovo.pixelbedwars.settings.resource.ResourceSpawner;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
+import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import lombok.Getter;
+import net.minecraft.server.v1_8_R3.EntityEnderDragon;
+import net.minecraft.server.v1_8_R3.WorldServer;
 import org.bukkit.*;
+import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.Wool;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Arrays;
@@ -64,12 +68,30 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     public void onEnable() {
         PixelBedwars.pixelBedwars = this;
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
-        getServer().getMessenger().registerIncomingPluginChannel(this, "BungeeCord", new PluginMessageListener() {
-            @Override
-            public void onPluginMessageReceived(String s, Player player, byte[] bytes) {
+        getServer().getMessenger().registerIncomingPluginChannel(this, "BungeeCord", (s, player, bytes) -> {
 
-            }
         });
+        boot();
+        if (!initDatabase()) {
+            return;
+        }
+        initConfigurations();
+        loadCustomEntity();
+        new PlaceholderHook(this).hook();
+        this.bedwarsGame = new BedwarsGame().loadGame(gameSetting);
+        initGui();
+        registerCommands();
+    }
+
+    private void loadCustomEntity() {
+        try {
+            NMSUtils.registerEntity(BedwarsEnderDragon.class, "BedwarsEnderDragon", EntityType.ENDER_DRAGON.getTypeId());
+        } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void boot() {
         this.corpsesManager = new CorpsesManager();
         configurationManager = new ConfigurationManager(this);
         this.playerPlayerStatisticModelLoadingCache = CacheBuilder
@@ -92,7 +114,40 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         return playerStatisticModel;
                     }
                 });
-        World defaultWorld = Bukkit.getWorlds().get(0);
+    }
+
+    private void initGui() {
+        InventoryBuilder inventoryBuilder = InventoryBuilder.builder()
+                .displayName("队伍选择")
+                .size(9)
+                .itemMap(new HashMap<>())
+                .build();
+        this.getBedwarsGame().getTeamList()
+                .forEach(team -> {
+                    List<String> collect = language.getTeamItemLore().stream()
+                            .map(string -> string.replace("%team_name%", team.getTeamMeta().getTeamName()))
+                            .collect(Collectors.toList());
+                    ItemStack pack = new ItemFactory(() -> new ItemStack(Material.WOOL))
+                            .setDisplayName(team.getTeamMeta().getTeamColor() + team.getTeamMeta().getTeamName())
+                            .setLore(collect)
+                            .pack();
+                    ((Wool) pack.getData())
+                            .setColor(DyeColor.valueOf(team.getTeamMeta().getWoolColor()));
+                    inventoryBuilder.addItem(pack);
+                });
+        inventoryBuilder.fillWith(new ItemStack(Material.STAINED_GLASS_PANE))
+                .onClickListener((i, itemStack, player) -> {
+                    if (itemStack.getItemMeta().hasLore() && itemStack.getItemMeta().hasDisplayName()) {
+                        String displayName = itemStack.getItemMeta().getDisplayName();
+                        displayName = displayName.replaceAll("§.", "");
+                        this.getBedwarsGame().requestSwitchTeamByName(player, displayName);
+                    }
+                })
+                .openWith(new ItemFactory(() -> new ItemStack(Material.valueOf(gameSetting.getSelectTeamItemType()))).setDisplayName(language.getSlimeBallName()).setLore(language.getSlimeBallLore()).pack())
+                .lock();
+    }
+
+    private boolean initDatabase() {
         try {
             SQLConfiguration sqlConfiguration = DatabaseManagerBase.setupDatabase(this);
             DatabaseManager gamebattle_database = DatabaseManager.newBuilder()
@@ -108,12 +163,17 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
             getLogger().warning("Init configuration file failed,please try again");
             getLogger().warning(e.getLocalizedMessage());
             Bukkit.getPluginManager().disablePlugin(this);
-            return;
+            return false;
         } catch (DatabaseInitException e) {
             getLogger().warning("Database init error with " + e.getLocalizedMessage());
             Bukkit.getPluginManager().disablePlugin(this);
-            return;
+            return false;
         }
+        return true;
+    }
+
+    private void initConfigurations() {
+        World defaultWorld = Bukkit.getWorlds().get(0);
         configurationManager.registerConfiguration("gameSetting", () -> {
             VecLoc3D defaultLocation = VecLoc3D.valueOf(defaultWorld.getSpawnLocation());
             return GameSetting.builder()
@@ -123,25 +183,21 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                     .waitTime(30)
                     .playerFullWaitTime(10)
                     .gameTime(600)
-                    .randomSpawnLocations(Lists.newArrayList())
-                    .teamMetaList(Arrays.asList(TeamMeta.builder()
-                            .minPlayer(1)
-                            .maxPlayer(4)
-                            .teamColor(ChatColor.RED.toString())
-                            .teamGameLocation(defaultLocation)
-                            .teamName("红队")
-                            .woolColor(DyeColor.RED.name())
-                            .build(), TeamMeta.builder()
-                            .minPlayer(1)
-                            .maxPlayer(4)
-                            .teamColor(ChatColor.BLUE.toString())
-                            .teamGameLocation(defaultLocation)
-                            .teamName("蓝队")
-                            .woolColor(DyeColor.BLUE.name())
-                            .build()))
+                    .teamMetaList(Arrays.asList(
+                            TeamMeta.builder()
+                                    .minPlayer(1)
+                                    .maxPlayer(4)
+                                    .teamColor(ChatColor.BLUE.toString())
+                                    .teamGameLocation(defaultLocation)
+                                    .teamName("蓝队")
+                                    .woolColor(DyeColor.BLUE.name())
+                                    .goldSpawnerList(Lists.newArrayList())
+                                    .diamondSpawnerList(Lists.newArrayList())
+                                    .emeraldSpawnerList(Lists.newArrayList())
+                                    .ironSpawnerList(Lists.newArrayList())
+                                    .build()))
                     .respawnCoolDown(5)
-                    .mapWorldCenter(defaultLocation)
-                    .borderSize(100)
+                    .playerRespawnWaitLocation(defaultLocation)
                     .playerMaxHealth(40)
                     .playerCorpseEnable(true)
                     .playerCorpseDespawnRate(600)
@@ -157,19 +213,19 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                     .waitScoreboard(ScoreboardConfiguration.builder()
                             .displayName("等待中")
                             .isEnable(true)
-                            .lines(Arrays.asList("游戏人数: %gb_gameplayers%/%gb_maxplayer%", " %gb_needplayer% "))
+                            .lines(Arrays.asList("游戏人数: %pb_gameplayers%/%pb_maxplayer%", " %pb_needplayer% "))
                             .build())
                     .gamingScoreboard(ScoreboardConfiguration.builder()
                             .displayName("游戏中")
                             .isEnable(true)
-                            .lines(Arrays.asList("游戏人数: %gb_gameplayers%", "游戏中", "剩余时间: %gb_time%", "重生等待时间: %gb_respawntime%"))
+                            .lines(Arrays.asList("游戏人数: %pb_gameplayers%", "游戏中", "剩余时间: %pb_time%", "重生等待时间: %pb_respawntime%"))
                             .build())
                     .endScoreboard(ScoreboardConfiguration.builder()
                             .displayName("游戏结束")
                             .isEnable(true)
                             .lines(Arrays.asList("游戏结束", "正在等待传送"))
                             .build())
-                    .randomInventoryItemListList(Arrays.asList(
+                    /*.randomInventoryItemListList(Arrays.asList(
                             RandomInventoryItemList.builder()
                                     .randomInventoryItemList(Collections.singletonList(RandomInventoryItem.builder()
                                             .inventoryItem(InventoryItem.builder()
@@ -186,7 +242,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                             .build()))
                                     .chance(100)
                                     .build()
-                    ))
+                    ))*/
                     .motdWait("等待中")
                     .motdGaming("游戏中")
                     .motdEnd("游戏结束")
@@ -212,46 +268,13 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         .waitPlayer("还需要 %num% 个玩家开始游戏")
                         .quitItemName("example")
                         .quitItemLore(Collections.singletonList("line1"))
-                        .playerChatFormat("[Prefix][%player_name%][%gb_team%]: %s")
-                        .waitActionbar("[%gb_gameplayers%]/[%gb_maxplayer%] -- 还需要 %gb_needplayer% -- 队伍: %gb_team%")
+                        .playerChatFormat("[Prefix][%player_name%][%pb_team%]: %s")
+                        .waitActionbar("[%pb_gameplayers%]/[%pb_maxplayer%] -- 还需要 %pb_needplayer% -- 队伍: %pb_team%")
                         .gamingActionbar("undefined")
                         .endActionbar("undefined")
                         .build())
                 .init(PixelBedwars.class, this)
                 .start();
-        new PlaceholderAPI(this).hook();
-        this.bedwarsGame = new BedwarsGame();
-        bedwarsGame.loadGame(gameSetting);
-        InventoryBuilder inventoryBuilder = InventoryBuilder.builder()
-                .displayName("队伍选择")
-                .size(9)
-                .itemMap(new HashMap<>())
-                .build();
-        this.getBedwarsGame().getTeamList()
-                .forEach(team -> {
-                    List<String> collect = language.getTeamItemLore().stream()
-                            .map(string -> string.replace("%team_name%", team.getTeamMeta().getTeamName()))
-                            .collect(Collectors.toList());
-                    ItemStack pack = new ItemFactory(() -> new ItemStack(Material.WOOL))
-                            .setDisplayName(team.getTeamMeta().getTeamColor() + team.getTeamMeta().getTeamName())
-                            .setLore(collect)
-                            .pack();
-                    ((Wool) pack.getData())
-                            .setColor(DyeColor.valueOf(team.getTeamMeta().getWoolColor()));
-                    inventoryBuilder.addItem(pack
-                    );
-                });
-        inventoryBuilder.fillWith(new ItemStack(Material.STAINED_GLASS_PANE))
-                .onClickListener((i, itemStack, player) -> {
-                    if (itemStack.getItemMeta().hasLore() && itemStack.getItemMeta().hasDisplayName()) {
-                        String displayName = itemStack.getItemMeta().getDisplayName();
-                        displayName = displayName.replaceAll("§.", "");
-                        this.getBedwarsGame().requestSwitchTeamByName(player, displayName);
-                    }
-                })
-                .openWith(new ItemFactory(() -> new ItemStack(Material.valueOf(gameSetting.getSelectTeamItemType()))).setDisplayName(language.getSlimeBallName()).setLore(language.getSlimeBallLore()).pack())
-                .lock();
-        registerCommands();
     }
 
     @Override
@@ -274,19 +297,19 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
 
     public void registerCommands() {
         MainCommandSpec.newBuilder()
-                .addAlias("gb")
-                .addAlias("gameskywars")
+                .addAlias("pb")
+                .addAlias("pixelbedwars")
                 .withDescription("PixelBedwars main command")
-                .withPermission("gameskywars.*")
+                .withPermission("pixelbedwars.*")
                 .childCommandSpec(SubCommandSpec.newBuilder()
-                        .addAlias("setBorderCenter")
-                        .addAlias("sbc")
+                        .addAlias("setWorldSpawn")
+                        .addAlias("sws")
                         .withCommandSpecExecutor((commandSender, strings) -> {
                             if (!(commandSender instanceof Player)) {
                                 return true;
                             }
                             try {
-                                getGameSetting().setMapWorldCenter(VecLoc3D.valueOf(((Player) commandSender).getLocation()));
+                                getGameSetting().setPlayerRespawnWaitLocation(VecLoc3D.valueOf(((Player) commandSender).getLocation()));
                                 save();
                                 commandSender.sendMessage("成功!");
                             } catch (NullPointerException e) {
@@ -296,23 +319,24 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         })
                         .build())
                 .childCommandSpec(SubCommandSpec.newBuilder()
-                        .addAlias("addRandomSpawnLocation")
-                        .addAlias("arsl")
+                        .addAlias("tt1")
                         .withCommandSpecExecutor((commandSender, strings) -> {
                             if (!(commandSender instanceof Player)) {
                                 return true;
                             }
-                            try {
-                                getGameSetting().getRandomSpawnLocations().add(VecLoc3D.valueOf(((Player) commandSender).getLocation()));
-                                save();
-                                commandSender.sendMessage("成功!");
-                            } catch (NullPointerException e) {
-                                e.printStackTrace();
-                            }
+                            Player player = (Player) commandSender;
+                            WorldServer handle = ((CraftWorld) player.getWorld()).getHandle();
+                            Location l1 = player.getLocation();
+                            EntityEnderDragon entityEnderDragon = new EntityEnderDragon(handle);
+                            entityEnderDragon.setPosition(l1.getX(), l1.getY(), l1.getZ());
+                            handle.addEntity(entityEnderDragon);
+                            Bukkit.getScheduler().runTaskTimerAsynchronously(getPixelBedwars(), () -> {
+                                entityEnderDragon.target = ((CraftPlayer) player).getHandle();
+                            }, 0L, 1L);
                             return true;
                         })
                         .build())
-                .childCommandSpec(SubCommandSpec.newBuilder()
+                /*.childCommandSpec(SubCommandSpec.newBuilder()
                         .addAlias("addRandomItem")
                         .addAlias("ari")
                         .childCommandSpec(SubCommandSpec.newBuilder()
@@ -387,7 +411,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             commandSender.sendMessage("/gb addRandomItem/ari add [组名字] - 添加手上物品到指定随机物品集合");
                             return true;
                         })
-                        .build())
+                        .build())*/
                 .childCommandSpec(SubCommandSpec.newBuilder()
                         .addAlias("setWaitLoc")
                         .addAlias("swl")
@@ -426,13 +450,115 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             return true;
                         })
                         .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("addTeam")
+                        .addAlias("at")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            if (strings.length < 5) {
+                                commandSender.sendMessage("/pb addTeam [队伍名字] [队伍颜色] [最小人数] [最大人数] [队伍颜色]");
+                                return true;
+                            }
+                            try {
+                                TeamMeta build = TeamMeta.builder()
+                                        .teamName(strings[0])
+                                        .teamColor(ChatColor.valueOf(strings[1]).toString())
+                                        .minPlayer(Integer.valueOf(strings[2]))
+                                        .maxPlayer(Integer.valueOf(strings[3]))
+                                        .teamGameLocation(null)
+                                        .woolColor(DyeColor.valueOf(strings[4]).name())
+                                        .teamBedLocation(null)
+                                        .ironSpawnerList(Lists.newArrayList())
+                                        .goldSpawnerList(Lists.newArrayList())
+                                        .diamondSpawnerList(Lists.newArrayList())
+                                        .emeraldSpawnerList(Lists.newArrayList())
+                                        .build();
+                                getGameSetting().getTeamMetaList().add(build);
+                                save();
+                                commandSender.sendMessage("成功!");
+                            } catch (NullPointerException e) {
+                                e.printStackTrace();
+                            }
+                            return true;
+                        })
+                        .childCommandSpec(SubCommandSpec.newBuilder()
+                                .addAlias("setTeamBed")
+                                .addAlias("stb")
+                                .withCommandSpecExecutor((commandSender, strings) -> {
+                                    if (!(commandSender instanceof Player)) {
+                                        return true;
+                                    }
+                                    if (strings.length < 1) {
+                                        commandSender.sendMessage("/pb setTeamBed [队伍名称]");
+                                        return true;
+                                    }
+                                    try {
+                                        TeamMeta aThrow = getGameSetting().getTeamMetaList()
+                                                .stream()
+                                                .filter(teamMeta -> teamMeta.getTeamName().equals(strings[0]))
+                                                .findAny()
+                                                .orElseThrow(NullPointerException::new);
+                                        aThrow.setTeamBedLocation(VecLoc3D.valueOf(((Player) commandSender).getLocation().add(0, -1, 0)));
+                                        save();
+                                        commandSender.sendMessage("成功!");
+                                    } catch (NullPointerException e) {
+                                        e.printStackTrace();
+                                    }
+                                    return true;
+                                })
+                                .build())
+                        .childCommandSpec(SubCommandSpec.newBuilder()
+                                .addAlias("addSpawner")
+                                .addAlias("as")
+                                .withCommandSpecExecutor((commandSender, strings) -> {
+                                    if (!(commandSender instanceof Player)) {
+                                        return true;
+                                    }
+                                    if (strings.length < 3) {
+                                        commandSender.sendMessage("/pb addSpawner [队伍名称] [资源名称] [刷新间隔(秒)]");
+                                        return true;
+                                    }
+                                    try {
+                                        Player player = (Player) commandSender;
+                                        TeamMeta aThrow = getGameSetting().getTeamMetaList()
+                                                .stream()
+                                                .filter(teamMeta -> teamMeta.getTeamName().equals(strings[0]))
+                                                .findAny()
+                                                .orElseThrow(NullPointerException::new);
+                                        ResourceSpawner.SpawnerType spawnerType = ResourceSpawner.SpawnerType.valueOf(strings[2].toUpperCase());
+                                        ResourceSpawner resourceSpawner = new ResourceSpawner(Integer.valueOf(strings[1]), VecLoc3D.valueOf(player.getLocation()), spawnerType);
+                                        switch (spawnerType) {
+                                            case IRON:
+                                                aThrow.getIronSpawnerList().add(resourceSpawner);
+                                                break;
+                                            case GOLD:
+                                                aThrow.getGoldSpawnerList().add(resourceSpawner);
+                                                break;
+                                            case DIAMOND:
+                                                aThrow.getDiamondSpawnerList().add(resourceSpawner);
+                                                break;
+                                            case EMERALD:
+                                                aThrow.getEmeraldSpawnerList().add(resourceSpawner);
+                                                break;
+                                        }
+                                        aThrow.setTeamGameLocation(VecLoc3D.valueOf(player.getLocation()));
+                                        save();
+                                        commandSender.sendMessage("成功!");
+                                    } catch (NullPointerException e) {
+                                        e.printStackTrace();
+                                    }
+                                    return true;
+                                })
+                                .build())
+                        .build())
                 .withCommandSpecExecutor((commandSender, strings) -> {
-                    commandSender.sendMessage("/gb setBorderCenter/sbc - 设置边界中心点");
-                    commandSender.sendMessage("/gb addRandomSpawnLocation/arsl - 添加一个随机生成点");
-                    commandSender.sendMessage("/gb addRandomItem/ari create [组名字] [几率] - 创建一个随机物品集合");
-                    commandSender.sendMessage("/gb addRandomItem/ari add [组名字] - 添加手上物品到指定随机物品集合");
-                    commandSender.sendMessage("/gb setWaitLoc/swl - 设置大厅位置");
-                    commandSender.sendMessage("/gb setTeamGameLoc/stgl [队伍名字] - 设置队伍出生点为当前位置");
+                    commandSender.sendMessage("/pb setWorldSpawn/sws - 设置重生点");
+                    commandSender.sendMessage("/pb addRandomItem/ari create [组名字] [几率] - 创建一个随机物品集合");
+                    commandSender.sendMessage("/pb addRandomItem/ari add [组名字] - 添加手上物品到指定随机物品集合");
+                    commandSender.sendMessage("/pb setWaitLoc/swl - 设置大厅位置");
+                    commandSender.sendMessage("/pb setTeamGameLoc/stgl [队伍名字] - 设置队伍出生点为当前位置");
                     return true;
                 })
                 .build()

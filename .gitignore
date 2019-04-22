@@ -33,6 +33,7 @@ gradle-app.setting
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
 !litespigot-1.8.8-R0.1-SNAPSHOT.jar
+!HolographicDisplays.jar
 
 # Cache of project
 .gradletasknamecache
@@ -43,5 +44,7 @@ gradle-app.setting
 # IntelliJ project files
 .idea
 *.iml
+*.ipr
+*.iws
 out
 gen

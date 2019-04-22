@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id "io.ebean" version "11.37.1"
 }
 
 group 'com.github.timmyovo'

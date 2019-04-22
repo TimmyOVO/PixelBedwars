@@ -1,7 +1,6 @@
 package com.github.timmyovo.pixelbedwars.settings;
 
 import com.github.skystardust.ultracore.bukkit.models.VecLoc3D;
-import com.github.timmyovo.pixelbedwars.settings.item.RandomInventoryItemList;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,9 +31,7 @@ public class GameSetting {
     //重生冷却时间
     private int respawnCoolDown;
     //边界中心位置
-    private VecLoc3D mapWorldCenter;
-    //边界大小
-    private int borderSize;
+    private VecLoc3D playerRespawnWaitLocation;
     //玩家最大血量
     private int playerMaxHealth;
     //是否开启玩家尸体
@@ -46,9 +43,6 @@ public class GameSetting {
     private ScoreboardConfiguration gamingScoreboard;
     private ScoreboardConfiguration endScoreboard;
 
-    private List<RandomInventoryItemList> randomInventoryItemListList;
-
-
     private String motdWait;
     private String motdGaming;
     private String motdEnd;
@@ -59,8 +53,6 @@ public class GameSetting {
     private String quitItemType;
     private int quitItemSlot;
     private int serverRestartDelay;
-
-    private List<VecLoc3D> randomSpawnLocations;
 
     private boolean disableWeather;
     private boolean disableTimeCycle;

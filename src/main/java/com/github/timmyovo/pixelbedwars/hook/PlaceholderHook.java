@@ -13,9 +13,9 @@ import org.bukkit.plugin.Plugin;
 import java.lang.reflect.Field;
 import java.util.UUID;
 
-public class PlaceholderAPI extends EZPlaceholderHook {
-    public PlaceholderAPI(Plugin plugin) {
-        super(plugin, "gb");
+public class PlaceholderHook extends EZPlaceholderHook {
+    public PlaceholderHook(Plugin plugin) {
+        super(plugin, "pb");
     }
 
     @Override
@@ -69,7 +69,7 @@ public class PlaceholderAPI extends EZPlaceholderHook {
                 String[] split = s.split("#");
                 try {
                     Integer integer = Integer.valueOf(split[1]);
-                    GamePlayer gamePlayer = bedwarsGame.getBattlePlayer(player);
+                    GamePlayer gamePlayer = bedwarsGame.getBedwarsPlayer(player);
                     if (gamePlayer == null) {
                         return "#ERROR";
                     }
