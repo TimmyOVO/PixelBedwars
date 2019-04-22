@@ -1,0 +1,5 @@
+name: PixelBedwars
+version: @version@
+main: com.github.timmyovo.pixelbedwars.PixelBedwars
+depend: [UltraCore]
+authors: [TimmyOVO]
