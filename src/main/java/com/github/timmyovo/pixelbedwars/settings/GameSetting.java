@@ -1,6 +1,7 @@
 package com.github.timmyovo.pixelbedwars.settings;
 
 import com.github.skystardust.ultracore.bukkit.models.VecLoc3D;
+import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,9 +25,6 @@ public class GameSetting {
     private int waitTime;
     //玩家满后缩短到多少等待时间
     private int playerFullWaitTime;
-    //游戏时长限制
-    private int gameTime;
-
     private List<TeamMeta> teamMetaList;
     //重生冷却时间
     private int respawnCoolDown;
@@ -38,6 +36,8 @@ public class GameSetting {
     private boolean playerCorpseEnable;
     //尸体消失速率
     private int playerCorpseDespawnRate;
+    //阶段设置
+    private List<StageEntry> stageEntryList;
 
     private ScoreboardConfiguration waitScoreboard;
     private ScoreboardConfiguration gamingScoreboard;

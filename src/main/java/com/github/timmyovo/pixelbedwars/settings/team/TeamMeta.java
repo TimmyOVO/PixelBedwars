@@ -26,10 +26,37 @@ public class TeamMeta {
     private List<ResourceSpawner> diamondSpawnerList;
     private List<ResourceSpawner> emeraldSpawnerList;
 
+    public String getFormatTeamName() {
+        return getTeamColor() + getTeamName();
+    }
+
     public void tickSpawner() {
         getIronSpawnerList().forEach(ResourceSpawner::tickInterval);
         getGoldSpawnerList().forEach(ResourceSpawner::tickInterval);
         getDiamondSpawnerList().forEach(ResourceSpawner::tickInterval);
         getEmeraldSpawnerList().forEach(ResourceSpawner::tickInterval);
+    }
+
+    public void allSpawnerMultiplier(int multiplier) {
+        for (ResourceSpawner.SpawnerType value : ResourceSpawner.SpawnerType.values()) {
+            setResourceSpawnerMultiplier(value, multiplier);
+        }
+    }
+
+    public void setResourceSpawnerMultiplier(ResourceSpawner.SpawnerType spawnerType, int multiplier) {
+        switch (spawnerType) {
+            case IRON:
+                this.ironSpawnerList.forEach(resourceSpawner -> resourceSpawner.setMultiplier(multiplier));
+                break;
+            case GOLD:
+                this.goldSpawnerList.forEach(resourceSpawner -> resourceSpawner.setMultiplier(multiplier));
+                break;
+            case DIAMOND:
+                this.diamondSpawnerList.forEach(resourceSpawner -> resourceSpawner.setMultiplier(multiplier));
+                break;
+            case EMERALD:
+                this.emeraldSpawnerList.forEach(resourceSpawner -> resourceSpawner.setMultiplier(multiplier));
+                break;
+        }
     }
 }

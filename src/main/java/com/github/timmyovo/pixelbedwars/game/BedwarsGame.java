@@ -10,6 +10,7 @@ import com.github.timmyovo.pixelbedwars.entity.Corpses;
 import com.github.timmyovo.pixelbedwars.entity.CorpsesManager;
 import com.github.timmyovo.pixelbedwars.settings.GameSetting;
 import com.github.timmyovo.pixelbedwars.settings.Language;
+import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
 import com.google.common.collect.ImmutableMap;
@@ -71,15 +72,18 @@ public class BedwarsGame implements Listener {
 
     private BukkitTask gameTickTask;
 
-    private BukkitTask endGameTask;
-    private int gameTimeCounter;
+    private BukkitTask stageTickTask;
     private Language language;
+
+    private Map<UUID, Corpses.CorpseData> playerCorpseDataMap;
 
     public BedwarsGame loadGame(GameSetting gameSetting) {
         this.gameState = GameState.LOADING;
         this.gameSetting = gameSetting;
         this.language = PixelBedwars.getPixelBedwars().getLanguage();
+        this.playerCorpseDataMap = new HashMap<>();
         this.scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+        this.getGameSetting().getStageEntryList().forEach(StageEntry::init);
         Bukkit.getWorlds().forEach(world -> {
             world.setGameRuleValue("doDaylightCycle", gameSetting.isDisableTimeCycle() ? "false" : "true");
         });
@@ -98,18 +102,17 @@ public class BedwarsGame implements Listener {
                 .collect(Collectors.toList());
         this.gameStartCounter = gameSetting.getWaitTime();
         this.gamePlayers = Lists.newArrayList();
-        this.gameTimeCounter = gameSetting.getGameTime();
         checkChunk(gameSetting.getPlayerWaitLocation()
                 .toBukkitLocation());
-        this.endGameTask = new BukkitRunnable() {
+        this.stageTickTask = new BukkitRunnable() {
             @Override
             public void run() {
                 if (getGameState() != GameState.GAMING) {
                     return;
                 }
-                gameTimeCounter--;
-                if (gameTimeCounter <= 0) {
-                    endGame();
+                try {
+                    getNextStage().tick();
+                } catch (NullPointerException ignored) {
                 }
             }
         }.runTaskTimer(PixelBedwars.getPixelBedwars(), 0L, 20L);
@@ -121,6 +124,7 @@ public class BedwarsGame implements Listener {
                 }
 
                 if (canGameStart()) {
+                    gameStartCounter--;
                     BedwarsGame.this.getGamePlayers()
                             .stream()
                             .map(GamePlayer::getPlayer)
@@ -129,7 +133,6 @@ public class BedwarsGame implements Listener {
                                 player.setExp(v);
                                 player.setLevel(gameStartCounter);
                             });
-                    gameStartCounter--;
                     updateScoreboard();
                     if (gameStartCounter <= 5) {
                         BedwarsGame.this.getGamePlayers()
@@ -183,6 +186,14 @@ public class BedwarsGame implements Listener {
         Bukkit.getPluginManager().registerEvents(this, PixelBedwars.getPixelBedwars());
         this.gameState = GameState.WAITING;
         return this;
+    }
+
+    public StageEntry getNextStage() {
+        return getGameSetting().getStageEntryList()
+                .stream()
+                .sorted(Comparator.comparingInt(StageEntry::getFlow))
+                .filter(se -> se.getCounter() >= 0)
+                .findFirst().orElse(getGameSetting().getStageEntryList().get(0));
     }
 
     private void sendActionbar(Player player, String s) {
@@ -472,6 +483,15 @@ public class BedwarsGame implements Listener {
         return checkTeamBedLocation(block, playerTeam);
     }
 
+    public void playerDestroyBed(Player player, GameTeam gameTeam) {
+        String playerDestroyBedMessage = getLanguage().getPlayerDestroyBedMessage();
+        sendMessage(player, playerDestroyBedMessage, ImmutableMap.of("%player%", player.getName(), "%team%", gameTeam.getTeamMeta().getTeamName()));
+    }
+
+    public void playerDestroyBed(GamePlayer player, GameTeam gameTeam) {
+        playerDestroyBed(player.getPlayer(), gameTeam);
+    }
+
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent blockPlaceEvent) {
         Player player = blockPlaceEvent.getPlayer();
@@ -495,7 +515,7 @@ public class BedwarsGame implements Listener {
             if (block.getType() == Material.BED_BLOCK) {
                 try {
                     GameTeam gameTeamByBedLocation = getGameTeamByBedLocation(block);
-                    //todo 发送队伍床被破坏的消息
+                    playerDestroyBed(player, gameTeamByBedLocation);
                 } catch (NullPointerException ignored) {
 
                 }
@@ -597,6 +617,7 @@ public class BedwarsGame implements Listener {
                 inventory.setContents(i1.getContents());
                 Corpses.CorpseData corpseData = pixelBedwars.getCorpsesManager()
                         .spawnCorpse(entity, null, entity.getLocation(), inventory, 0);
+                this.playerCorpseDataMap.put(entity.getUniqueId(), corpseData);
                 Bukkit.getScheduler().runTaskLater(pixelBedwars, () -> {
                     pixelBedwars.getCorpsesManager().removeCorpse(corpseData);
                 }, gameSetting.getPlayerCorpseDespawnRate() * 20L);
@@ -617,6 +638,11 @@ public class BedwarsGame implements Listener {
         player.setMaxHealth(gameSetting.getPlayerMaxHealth());
         CorpsesManager corpsesManager = PixelBedwars.getPixelBedwars()
                 .getCorpsesManager();
+        Corpses.CorpseData corpseData = playerCorpseDataMap.get(player.getUniqueId());
+        if (corpseData != null) {
+            corpsesManager.removeCorpse(corpseData);
+            playerCorpseDataMap.remove(player.getUniqueId());
+        }
         getBedwarsPlayer(player).setRespawning(false);
         randomPlayerInventoryItem(player);
         //todo 发送复活消息
@@ -787,8 +813,12 @@ public class BedwarsGame implements Listener {
         }
     }
 
+    public void sendMessage(Player gamePlayer, String string, @Nullable Map<String, String> map) {
+        gamePlayer.sendMessage(formatMessage(string, map));
+    }
+
     public void sendMessage(GamePlayer gamePlayer, String string, @Nullable Map<String, String> map) {
-        gamePlayer.getPlayer().sendMessage(formatMessage(string, map));
+        sendMessage(gamePlayer.getPlayer(), string, map);
     }
 
     public void broadcastMessage(String string, @Nullable Map<String, String> map) {
@@ -857,5 +887,14 @@ public class BedwarsGame implements Listener {
 
     public GameTeam getPlayerTeam(GamePlayer gamePlayer) {
         return getPlayerTeam(gamePlayer.getPlayer());
+    }
+
+    public void destroyAllBed() {
+        getTeamList().stream()
+                .map(GameTeam::getTeamMeta)
+                .map(TeamMeta::getTeamBedLocation)
+                .map(VecLoc3D::toBukkitLocation)
+                .map(Location::getBlock)
+                .forEach(Block::breakNaturally);
     }
 }

@@ -21,10 +21,12 @@ public class ResourceSpawner {
     private Material hologramIcon;
     private List<String> hologramTexts;
     private transient int remainTicks;
+    private transient int multiplier;
 
     public ResourceSpawner(int spawnInterval, VecLoc3D spawnerLocation, SpawnerType spawnerType) {
         this.spawnInterval = spawnInterval;
         this.spawnerLocation = spawnerLocation;
+        this.multiplier = 1;
         switch (spawnerType) {
             case IRON:
                 this.itemToSpawn = InventoryItem.builder()
@@ -53,7 +55,7 @@ public class ResourceSpawner {
 
     public void tickInterval() {
         if (remainTicks == 0) {
-            remainTicks = spawnInterval * 20;
+            remainTicks = (spawnInterval * 20) / multiplier;
             Location location = spawnerLocation.toBukkitLocation();
             location.getWorld().dropItem(location, itemToSpawn.toItemStack());
             return;

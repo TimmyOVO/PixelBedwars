@@ -16,11 +16,13 @@ import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
 import com.github.timmyovo.pixelbedwars.entity.BedwarsEnderDragon;
 import com.github.timmyovo.pixelbedwars.entity.CorpsesManager;
 import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
+import com.github.timmyovo.pixelbedwars.game.GameTeam;
 import com.github.timmyovo.pixelbedwars.hook.PlaceholderHook;
 import com.github.timmyovo.pixelbedwars.settings.GameSetting;
 import com.github.timmyovo.pixelbedwars.settings.Language;
 import com.github.timmyovo.pixelbedwars.settings.ScoreboardConfiguration;
 import com.github.timmyovo.pixelbedwars.settings.resource.ResourceSpawner;
+import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
 import com.google.common.cache.CacheBuilder;
@@ -189,7 +191,6 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                     .maxPlayer(10)
                     .waitTime(30)
                     .playerFullWaitTime(10)
-                    .gameTime(600)
                     .teamMetaList(Arrays.asList(
                             TeamMeta.builder()
                                     .minPlayer(1)
@@ -217,6 +218,38 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                     .disableTimeCycle(true)
                     .counterSound(Sound.ORB_PICKUP.name())
                     .hubServers(Arrays.asList("hub1", "hub2"))
+                    .stageEntryList(Arrays.asList(
+                            StageEntry.builder()
+                                    .stageName("绿宝石生成Ⅰ阶段")
+                                    .stageCounter(5)
+                                    .flow(1)
+                                    .stageCommand("pb strrs EMERALD 2")
+                                    .build(),
+                            StageEntry.builder()
+                                    .stageName("绿宝石生成Ⅱ阶段")
+                                    .stageCounter(120)
+                                    .flow(2)
+                                    .stageCommand("pb strrs EMERALD 3")
+                                    .build(),
+                            StageEntry.builder()
+                                    .stageName("绿宝石生成Ⅲ阶段")
+                                    .stageCounter(600)
+                                    .flow(3)
+                                    .stageCommand("pb strrs EMERALD 5")
+                                    .build(),
+                            StageEntry.builder()
+                                    .stageName("所有床自毁")
+                                    .stageCounter(300)
+                                    .flow(4)
+                                    .stageCommand("pb dab")
+                                    .build(),
+                            StageEntry.builder()
+                                    .stageName("绝杀模式")
+                                    .stageCounter(300)
+                                    .flow(5)
+                                    .stageCommand("pb dm")
+                                    .build()
+                    ))
                     .waitScoreboard(ScoreboardConfiguration.builder()
                             .displayName("起床战争")
                             .isEnable(true)
@@ -259,30 +292,14 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             .isEnable(true)
                             .lines(Arrays.asList("游戏结束", "正在等待传送"))
                             .build())
-                    /*.randomInventoryItemListList(Arrays.asList(
-                            RandomInventoryItemList.builder()
-                                    .randomInventoryItemList(Collections.singletonList(RandomInventoryItem.builder()
-                                            .inventoryItem(InventoryItem.builder()
-                                                    .itemstackData(new ItemStack(Material.WOOD_SWORD).serialize())
-                                                    .build())
-                                            .build()))
-                                    .chance(100)
-                                    .build(),
-                            RandomInventoryItemList.builder()
-                                    .randomInventoryItemList(Collections.singletonList(RandomInventoryItem.builder()
-                                            .inventoryItem(InventoryItem.builder()
-                                                    .itemstackData(new ItemStack(Material.LEATHER_CHESTPLATE).serialize())
-                                                    .build())
-                                            .build()))
-                                    .chance(100)
-                                    .build()
-                    ))*/
                     .motdWait("等待中")
                     .motdGaming("游戏中")
                     .motdEnd("游戏结束")
                     .build();
         })
                 .registerConfiguration("language", () -> Language.builder()
+                        .playerDestroyBedMessage("玩家 %player% 摧毁了 %team% 的床!")
+                        .allBedHasBeenDestroyed("所有床已经被摧毁")
                         .gameStart("游戏开始")
                         .gameCountingMessage("游戏还有 $s$ 开始!")
                         .playerJoinMessage("玩家 %player% 加入了游戏!")
@@ -353,10 +370,57 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         })
                         .build())
                 .childCommandSpec(SubCommandSpec.newBuilder()
-                        .addAlias("tt1")
+                        .addAlias("deathMatch")
+                        .addAlias("dm")
                         .withCommandSpecExecutor((commandSender, strings) -> {
                             if (!(commandSender instanceof Player)) {
                                 return true;
+                            }
+                            try {
+                                getGameSetting().setPlayerRespawnWaitLocation(VecLoc3D.valueOf(((Player) commandSender).getLocation()));
+                                save();
+                                commandSender.sendMessage("成功!");
+                            } catch (NullPointerException e) {
+                                e.printStackTrace();
+                            }
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("strrs")
+                        .addAlias("setTeamResourceRefreshSpeed")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            if (strings.length < 3) {
+                                if (strings.length == 2) {
+                                    try {
+                                        getBedwarsGame().getTeamList()
+                                                .stream()
+                                                .map(GameTeam::getTeamMeta)
+                                                .forEach(teamMeta -> {
+                                                    teamMeta.allSpawnerMultiplier(Integer.valueOf(strings[1]));
+                                                });
+                                    } catch (NumberFormatException m) {
+                                        commandSender.sendMessage("请输入数字");
+                                    } catch (EnumConstantNotPresentException n) {
+                                        commandSender.sendMessage("无法找到指定资源");
+                                    }
+                                    return true;
+                                }
+                                commandSender.sendMessage("/pb setTeamResourceRefreshSpeed [队伍名称] [资源名称] [资源刷新乘数]");
+                                return true;
+                            }
+                            try {
+                                GameTeam teamByName = getBedwarsGame().getTeamByName(strings[0]);
+                                teamByName.getTeamMeta().setResourceSpawnerMultiplier(ResourceSpawner.SpawnerType.valueOf(strings[1]), Integer.valueOf(strings[2]));
+                            } catch (NullPointerException e) {
+                                return true;
+                            } catch (NumberFormatException m) {
+                                commandSender.sendMessage("请输入数字");
+                            } catch (EnumConstantNotPresentException n) {
+                                commandSender.sendMessage("无法找到指定资源");
                             }
                             Player player = (Player) commandSender;
                             WorldServer handle = ((CraftWorld) player.getWorld()).getHandle();
@@ -446,6 +510,18 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             return true;
                         })
                         .build())*/
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("destroyAllBed")
+                        .addAlias("dab")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            getBedwarsGame().destroyAllBed();
+                            commandSender.sendMessage("成功!");
+                            return true;
+                        })
+                        .build())
                 .childCommandSpec(SubCommandSpec.newBuilder()
                         .addAlias("setWaitLoc")
                         .addAlias("swl")

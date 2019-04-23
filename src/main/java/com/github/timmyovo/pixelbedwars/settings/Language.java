@@ -22,6 +22,9 @@ public class Language {
     private String teamItemName;
     private List<String> teamItemLore;
 
+    private String playerDestroyBedMessage;
+    private String allBedHasBeenDestroyed;
+
     private String teamWinMessage;
     private String serverRestartMessage;
 

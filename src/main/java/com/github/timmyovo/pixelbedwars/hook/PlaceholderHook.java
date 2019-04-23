@@ -23,10 +23,10 @@ public class PlaceholderHook extends EZPlaceholderHook {
         Language language = PixelBedwars.getPixelBedwars().getLanguage();
         BedwarsGame bedwarsGame = PixelBedwars.getPixelBedwars().getBedwarsGame();
         if (s.equalsIgnoreCase("nextstage")) {
-            return "绿宝石生成点Ⅰ级";
+            return bedwarsGame.getNextStage().getStageName();
         }
         if (s.equalsIgnoreCase("nextstage_time")) {
-            return "2:13";
+            return formatSeconds(bedwarsGame.getNextStage().getCounter());
         }
         if (s.equalsIgnoreCase("waittime")) {
             return String.valueOf(bedwarsGame.getGameStartCounter());
@@ -36,9 +36,6 @@ public class PlaceholderHook extends EZPlaceholderHook {
         }
         if (s.equalsIgnoreCase("maxplayer")) {
             return String.valueOf(bedwarsGame.getGameSetting().getMaxPlayer());
-        }
-        if (s.equalsIgnoreCase("time")) {
-            return String.valueOf(bedwarsGame.getGameTimeCounter());
         }
         if (s.equalsIgnoreCase("kd")) {
             PlayerStatisticModel playerStatistic = PixelBedwars.getPixelBedwars().getPlayerStatistic(player);
@@ -111,5 +108,11 @@ public class PlaceholderHook extends EZPlaceholderHook {
             //todo 写完阶段变量
         }
         return null;
+    }
+
+    private String formatSeconds(int seconds) {
+        int ii = seconds % 60;
+        int minutes = (seconds - ii) / 60;
+        return minutes + ":" + ii;
     }
 }
