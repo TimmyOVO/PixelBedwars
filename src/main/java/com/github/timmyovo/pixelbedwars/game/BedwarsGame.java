@@ -235,7 +235,7 @@ public class BedwarsGame implements Listener {
         /*gameSetting.getRandomInventoryItemListList().stream()
                 .filter(randomInventoryItem -> new Random().nextInt(100) <= randomInventoryItem.getChance())
                 .forEach(randomInventoryItem -> randomInventoryItem.getRandomInventoryItemList().forEach(rr -> {
-                    player.getInventory().addItem(rr.getInventoryItem().toItemStack());
+                    player.getInventory().addItem(rr.getItems().toItemStack());
                 }));*/
     }
 

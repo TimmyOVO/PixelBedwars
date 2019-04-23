@@ -44,4 +44,6 @@ public class Language {
     private String waitActionbar;
     private String gamingActionbar;
     private String endActionbar;
+
+
 }

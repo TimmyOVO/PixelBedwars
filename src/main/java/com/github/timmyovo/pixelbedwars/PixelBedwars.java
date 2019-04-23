@@ -2,6 +2,7 @@ package com.github.timmyovo.pixelbedwars;
 
 import com.github.skystardust.ultracore.bukkit.commands.MainCommandSpec;
 import com.github.skystardust.ultracore.bukkit.commands.SubCommandSpec;
+import com.github.skystardust.ultracore.bukkit.models.InventoryItem;
 import com.github.skystardust.ultracore.bukkit.models.VecLoc3D;
 import com.github.skystardust.ultracore.bukkit.modules.inventory.InventoryBuilder;
 import com.github.skystardust.ultracore.bukkit.modules.item.ItemFactory;
@@ -24,10 +25,15 @@ import com.github.timmyovo.pixelbedwars.settings.ScoreboardConfiguration;
 import com.github.timmyovo.pixelbedwars.settings.resource.ResourceSpawner;
 import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
+import com.github.timmyovo.pixelbedwars.shop.AbstractShop;
+import com.github.timmyovo.pixelbedwars.shop.ShopGui;
+import com.github.timmyovo.pixelbedwars.shop.category.ShopCategory;
+import com.github.timmyovo.pixelbedwars.shop.item.ShopItem;
 import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import lombok.Getter;
 import net.minecraft.server.v1_8_R3.EntityEnderDragon;
@@ -58,6 +64,10 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     private ConfigurationManager configurationManager;
     private GameSetting gameSetting;
     private Language language;
+    private AbstractShop playerShop;
+    private ShopGui playerShopGui;
+    private AbstractShop teamShop;
+    private ShopGui teamShopGui;
     private BedwarsGame bedwarsGame;
     private DatabaseManager databaseManagerBase;
     private LoadingCache<Player, PlayerStatisticModel> playerPlayerStatisticModelLoadingCache;
@@ -119,6 +129,8 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     }
 
     private void initGui() {
+        playerShopGui = new ShopGui(playerShop);
+        Bukkit.getPluginManager().registerEvents(playerShopGui, this);
         InventoryBuilder inventoryBuilder = InventoryBuilder.builder()
                 .displayName("队伍选择")
                 .size(9)
@@ -183,6 +195,269 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
 
     private void initConfigurations() {
         World defaultWorld = Bukkit.getWorlds().get(0);
+        configurationManager.registerConfiguration("playerShop", () -> AbstractShop.builder()
+                .entityType(EntityType.VILLAGER)
+                .displayName("商店")
+                .categoryItems(ImmutableMap.<Integer, ShopCategory>builder()
+                        .put(0, ShopCategory.builder()
+                                .icon(InventoryItem.builder()
+                                        .itemstackData(new ItemFactory(() -> new ItemStack(Material.NETHER_STAR))
+                                                .setDisplayName("§b快速购买")
+                                                .pack().serialize())
+                                        .build())
+                                .shopItemMap(ImmutableMap.<Integer, ShopItem>builder()
+                                        .put(19, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.WOOL).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Collections.singletonList(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.WOOL).serialize())
+                                                        .build()))
+                                                .build())
+                                        .put(20, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.STONE_SWORD).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Collections.singletonList(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.STONE_SWORD).serialize())
+                                                        .build()))
+                                                .build())
+                                        .put(21, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.CHAINMAIL_BOOTS).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.CHAINMAIL_BOOTS).serialize())
+                                                                .build(),
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.CHAINMAIL_LEGGINGS).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(22, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.WOOD_PICKAXE).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.WOOD_PICKAXE).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(23, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.BOW).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.BOW).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(24, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.POTION).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.POTION).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(25, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.TNT).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.TNT).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(28, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.WOOD).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.WOOD).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(29, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_SWORD).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.IRON_SWORD).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(30, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_BOOTS).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.IRON_BOOTS).serialize())
+                                                                .build(),
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.IRON_LEGGINGS).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(31, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.SHEARS).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.SHEARS).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(32, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.ARROW).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.ARROW).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(33, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.POTION).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.POTION).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .put(34, ShopItem.builder()
+                                                .icon(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.WATER_BUCKET).serialize())
+                                                        .build())
+                                                .requireItem(InventoryItem.builder()
+                                                        .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                        .build())
+                                                .items(Arrays.asList(
+                                                        InventoryItem.builder()
+                                                                .itemstackData(new ItemStack(Material.WATER_BUCKET).serialize())
+                                                                .build()
+                                                ))
+                                                .build())
+                                        .build())
+                                .requirePermission(null)
+                                .build())
+                        .put(1, ShopCategory.builder()
+                                .icon(InventoryItem.builder()
+                                        .itemstackData(new ItemFactory(() -> new ItemStack(Material.HARD_CLAY))
+                                                .addLore("§e点击查看!")
+                                                .setDisplayName("§a方块")
+                                                .pack().serialize())
+                                        .build())
+                                .requirePermission(null)
+                                .build())
+                        .put(2, ShopCategory.builder()
+                                .icon(InventoryItem.builder()
+                                        .itemstackData(new ItemFactory(() -> new ItemStack(Material.STONE_SWORD))
+                                                .addLore("§e点击查看!")
+                                                .setDisplayName("§a近战武器")
+                                                .pack().serialize())
+                                        .build())
+                                .requirePermission(null)
+                                .build())
+                        .put(3, ShopCategory.builder()
+                                .icon(InventoryItem.builder()
+                                        .itemstackData(new ItemFactory(() -> new ItemStack(Material.CHAINMAIL_BOOTS))
+                                                .addLore("§e点击查看!")
+                                                .setDisplayName("§a装备")
+                                                .pack().serialize())
+                                        .build())
+                                .requirePermission(null)
+                                .build())
+                        .put(4, ShopCategory.builder()
+                                .icon(InventoryItem.builder()
+                                        .itemstackData(new ItemFactory(() -> new ItemStack(Material.STONE_PICKAXE))
+                                                .addLore("§e点击查看!")
+                                                .setDisplayName("§a工具")
+                                                .pack().serialize())
+                                        .build())
+                                .requirePermission(null)
+                                .build())
+                        .put(5, ShopCategory.builder()
+                                .icon(InventoryItem.builder()
+                                        .itemstackData(new ItemFactory(() -> new ItemStack(Material.BOW))
+                                                .addLore("§e点击查看!")
+                                                .setDisplayName("§a远程类")
+                                                .pack().serialize())
+                                        .build())
+                                .requirePermission(null)
+                                .build())
+                        .put(6, ShopCategory.builder()
+                                .icon(InventoryItem.builder()
+                                        .itemstackData(new ItemFactory(() -> new ItemStack(Material.BREWING_STAND_ITEM))
+                                                .addLore("§e点击查看!")
+                                                .setDisplayName("§a药水类")
+                                                .pack().serialize())
+                                        .build())
+                                .requirePermission(null)
+                                .build())
+                        .put(7, ShopCategory.builder()
+                                .icon(InventoryItem.builder()
+                                        .itemstackData(new ItemFactory(() -> new ItemStack(Material.TNT))
+                                                .addLore("§e点击查看!")
+                                                .setDisplayName("§a实用道具")
+                                                .pack().serialize())
+                                        .build())
+                                .requirePermission(null)
+                                .build())
+                        .build())
+                .build());
         configurationManager.registerConfiguration("gameSetting", () -> {
             VecLoc3D defaultLocation = VecLoc3D.valueOf(defaultWorld.getSpawnLocation());
             return GameSetting.builder()
@@ -347,6 +622,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     }
 
     public void registerCommands() {
+        AbstractShop.initShopCommands();
         MainCommandSpec.newBuilder()
                 .addAlias("pb")
                 .addAlias("pixelbedwars")
@@ -495,7 +771,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                             .stream()
                                             .filter(randomInventoryItemList -> randomInventoryItemList.getName().equals(strings[0]))
                                             .forEach(randomInventoryItemList -> randomInventoryItemList.add(RandomInventoryItem.builder()
-                                                    .inventoryItem(InventoryItem.builder()
+                                                    .items(InventoryItem.builder()
                                                             .itemstackData(player.getItemInHand().serialize())
                                                             .build())
                                                     .build()));
@@ -668,11 +944,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         })
                         .build())
                 .withCommandSpecExecutor((commandSender, strings) -> {
-                    commandSender.sendMessage("/pb setWorldSpawn/sws - 设置重生点");
-                    commandSender.sendMessage("/pb addRandomItem/ari create [组名字] [几率] - 创建一个随机物品集合");
-                    commandSender.sendMessage("/pb addRandomItem/ari add [组名字] - 添加手上物品到指定随机物品集合");
-                    commandSender.sendMessage("/pb setWaitLoc/swl - 设置大厅位置");
-                    commandSender.sendMessage("/pb setTeamGameLoc/stgl [队伍名字] - 设置队伍出生点为当前位置");
+
                     return true;
                 })
                 .build()

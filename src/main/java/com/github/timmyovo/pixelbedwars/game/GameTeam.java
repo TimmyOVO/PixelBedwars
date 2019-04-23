@@ -6,8 +6,12 @@ import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import com.google.common.collect.ImmutableMap;
 import lombok.*;
 import org.apache.commons.lang.Validate;
+import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 
 import java.util.List;
@@ -41,6 +45,38 @@ public class GameTeam {
         String name = teamMeta.getTeamColor() + "[" + teamMeta.getTeamName() + "]" + player.getName();
         player.setDisplayName(name);
         player.setPlayerListName(name);
+        applyPlayerTeamEquipment(player);
+    }
+
+    public void applyPlayerTeamEquipment(Player player) {
+        PlayerInventory inventory = player.getInventory();
+        ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
+        applyColorToLeather(helmet);
+        inventory.setHelmet(helmet);
+        ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE);
+        applyColorToLeather(chestplate);
+        inventory.setChestplate(chestplate);
+        ItemStack leggings = new ItemStack(Material.LEATHER_LEGGINGS);
+        applyColorToLeather(leggings);
+        inventory.setLeggings(leggings);
+        ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
+        applyColorToLeather(boots);
+        inventory.setBoots(boots);
+    }
+
+    public void applyColorToLeather(ItemStack itemStack) {
+        LeatherArmorMeta itemMeta = (LeatherArmorMeta) itemStack.getItemMeta();
+        itemMeta.setColor(colorFromName(getTeamMeta().getTeamColor()));
+        itemStack.setItemMeta(itemMeta);
+    }
+
+    public Color colorFromName(String color) {
+        try {
+            return ((Color) Color.class.getField(color).get(null));
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public void removePlayer(Player player) {
