@@ -77,6 +77,22 @@ public class BedwarsGame implements Listener {
 
     private Map<UUID, Corpses.CorpseData> playerCorpseDataMap;
 
+    public static boolean checkTeamBedLocation(Block block, GameTeam gameTeam) {
+        return checkTeamBedLocation(block, gameTeam.getTeamMeta().getTeamBedLocation().toBukkitLocation());
+    }
+
+    public static boolean checkTeamBedLocation(Block block, Location bedLocation) {
+        World world = bedLocation.getWorld();
+        Location blockLocation = block.getLocation();
+        BlockPosition blockPosition = new BlockPosition(blockLocation.getBlockX(), blockLocation.getBlockY(), blockLocation.getBlockZ());
+        Location east = NMSUtils.locationFromBlockPosition(world, blockPosition.east());
+        Location west = NMSUtils.locationFromBlockPosition(world, blockPosition.west());
+        Location north = NMSUtils.locationFromBlockPosition(world, blockPosition.north());
+        Location south = NMSUtils.locationFromBlockPosition(world, blockPosition.south());
+
+        return !bedLocation.equals(east) && !bedLocation.equals(west) && !bedLocation.equals(north) && !bedLocation.equals(south) && !blockLocation.equals(bedLocation);
+    }
+
     public BedwarsGame loadGame(GameSetting gameSetting) {
         this.gameState = GameState.LOADING;
         this.gameSetting = gameSetting;
@@ -215,10 +231,6 @@ public class BedwarsGame implements Listener {
                 .forEach(player -> sendTitle(player, string));
     }
 
-    public static boolean checkTeamBedLocation(Block block, GameTeam gameTeam) {
-        return checkTeamBedLocation(block, gameTeam.getTeamMeta().getTeamBedLocation().toBukkitLocation());
-    }
-
     private void randomPlayerInventoryItem(Player player) {
         /*gameSetting.getRandomInventoryItemListList().stream()
                 .filter(randomInventoryItem -> new Random().nextInt(100) <= randomInventoryItem.getChance())
@@ -299,18 +311,6 @@ public class BedwarsGame implements Listener {
             Bukkit.broadcastMessage("无法计算胜利队伍,平局!");
         }
         broadcastMessage(language.getServerRestartMessage(), ImmutableMap.of("%sec%", String.valueOf(gameSetting.getServerRestartDelay())));
-    }
-
-    public static boolean checkTeamBedLocation(Block block, Location bedLocation) {
-        World world = bedLocation.getWorld();
-        Location blockLocation = block.getLocation();
-        BlockPosition blockPosition = new BlockPosition(blockLocation.getBlockX(), blockLocation.getBlockY(), blockLocation.getBlockZ());
-        Location east = NMSUtils.locationFromBlockPosition(world, blockPosition.east());
-        Location west = NMSUtils.locationFromBlockPosition(world, blockPosition.west());
-        Location north = NMSUtils.locationFromBlockPosition(world, blockPosition.north());
-        Location south = NMSUtils.locationFromBlockPosition(world, blockPosition.south());
-
-        return !bedLocation.equals(east) && !bedLocation.equals(west) && !bedLocation.equals(north) && !bedLocation.equals(south) && !blockLocation.equals(bedLocation);
     }
 
     private GameTeam autoPlayerTeam() {

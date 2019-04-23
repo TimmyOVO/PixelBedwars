@@ -659,7 +659,6 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                         aThrow.getEmeraldSpawnerList().add(resourceSpawner);
                                         break;
                                 }
-                                aThrow.setTeamGameLocation(VecLoc3D.valueOf(player.getLocation()));
                                 save();
                                 commandSender.sendMessage("成功!");
                             } catch (NullPointerException e) {

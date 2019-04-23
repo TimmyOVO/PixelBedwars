@@ -29,7 +29,7 @@ processResources {
 }
 
 dependencies {
-    compile fileTree(dir: "libs",includes: ['*.jar'])
+    compile fileTree(dir: "libs", includes: ['*.jar'])
     compile 'com.github.skystardust:UltraCore-Bukkit:4.2-SNAPSHOT'
     compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.6'
     annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.6'
