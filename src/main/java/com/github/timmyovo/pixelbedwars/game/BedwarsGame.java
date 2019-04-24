@@ -6,6 +6,7 @@ import com.github.skystardust.ultracore.bukkit.modules.item.ItemFactory;
 import com.github.skystardust.ultracore.core.database.newgen.DatabaseManager;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
+import com.github.timmyovo.pixelbedwars.entity.BedwarsEnderDragon;
 import com.github.timmyovo.pixelbedwars.entity.Corpses;
 import com.github.timmyovo.pixelbedwars.entity.CorpsesManager;
 import com.github.timmyovo.pixelbedwars.settings.GameSetting;
@@ -22,12 +23,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import me.clip.placeholderapi.PlaceholderAPI;
-import net.minecraft.server.v1_8_R3.BlockPosition;
-import net.minecraft.server.v1_8_R3.EntityLiving;
-import net.minecraft.server.v1_8_R3.EntityPlayer;
-import net.minecraft.server.v1_8_R3.PacketPlayOutChat;
+import net.minecraft.server.v1_8_R3.*;
 import org.bukkit.*;
+import org.bukkit.Chunk;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
+import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_8_R3.util.CraftChatMessage;
 import org.bukkit.entity.Player;
@@ -74,6 +77,10 @@ public class BedwarsGame implements Listener {
     private BukkitTask gameTickTask;
 
     private BukkitTask stageTickTask;
+    private BukkitTask healthRegenTask;
+
+    private List<BedwarsEnderDragon> bedwarsEnderDragons;
+
     private Language language;
 
     private Map<UUID, Corpses.CorpseData> playerCorpseDataMap;
@@ -100,6 +107,7 @@ public class BedwarsGame implements Listener {
         this.language = PixelBedwars.getPixelBedwars().getLanguage();
         this.playerCorpseDataMap = new HashMap<>();
         this.scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+        this.bedwarsEnderDragons = new ArrayList<>();
         this.getGameSetting().getStageEntryList().forEach(StageEntry::init);
         Bukkit.getWorlds().forEach(world -> {
             world.setGameRuleValue("doDaylightCycle", gameSetting.isDisableTimeCycle() ? "false" : "true");
@@ -200,6 +208,27 @@ public class BedwarsGame implements Listener {
                 updateScoreboard();
             }
         }.runTaskTimer(PixelBedwars.getPixelBedwars(), 0L, 10L);
+        this.healthRegenTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                getTeamList()
+                        .forEach(gameTeam -> {
+                            if (gameTeam.getTeamShoppingProperties().healthRegenEnable) {
+                                gameTeam.getAlivePlayers()
+                                        .stream()
+                                        .map(GamePlayer::getPlayer)
+                                        .forEach(player -> {
+                                            if (player.getLocation().distance(gameTeam.getTeamMeta().getTeamGameLocation().toBukkitLocation()) <= 8) {
+                                                if (player.getHealth() != player.getMaxHealth()) {
+                                                    player.setHealth(player.getHealth() + 1);
+                                                }
+                                            }
+                                        });
+                            }
+                        });
+            }
+        }.runTaskTimer(PixelBedwars.getPixelBedwars(), 0L, 40L);
+
         Bukkit.getPluginManager().registerEvents(this, PixelBedwars.getPixelBedwars());
         this.gameState = GameState.WAITING;
         return this;
@@ -897,5 +926,21 @@ public class BedwarsGame implements Listener {
                 .map(VecLoc3D::toBukkitLocation)
                 .map(Location::getBlock)
                 .forEach(Block::breakNaturally);
+    }
+
+    public void callDeathMatch() {
+        getTeamList().forEach(gameTeam -> {
+            Location location = getGameSetting().getPlayerRespawnWaitLocation().toBukkitLocation();
+            WorldServer worldServer = ((CraftWorld) location
+                    .getWorld()).getHandle();
+            if (gameTeam.getTeamShoppingProperties().isDoubleDragonEnable()) {
+                BedwarsEnderDragon e = new BedwarsEnderDragon(worldServer, gameTeam);
+                getBedwarsEnderDragons().add(e);
+                e.spawnEntity(location);
+            }
+            BedwarsEnderDragon e = new BedwarsEnderDragon(worldServer, gameTeam);
+            getBedwarsEnderDragons().add(e);
+            e.spawnEntity(location);
+        });
     }
 }

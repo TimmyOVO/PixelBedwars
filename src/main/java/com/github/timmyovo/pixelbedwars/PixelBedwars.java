@@ -659,13 +659,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             if (!(commandSender instanceof Player)) {
                                 return true;
                             }
-                            try {
-                                getGameSetting().setPlayerRespawnWaitLocation(VecLoc3D.valueOf(((Player) commandSender).getLocation()));
-                                save();
-                                commandSender.sendMessage("成功!");
-                            } catch (NullPointerException e) {
-                                e.printStackTrace();
-                            }
+                            getBedwarsGame().callDeathMatch();
                             return true;
                         })
                         .build())

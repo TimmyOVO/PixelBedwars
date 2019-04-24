@@ -31,6 +31,7 @@ public class GameTeam {
     private Team team;
     private TeamShoppingProperties teamShoppingProperties;
 
+
     public void addPlayer(Player player) {
         Validate.notNull(player);
         if (team.getSize() + 1 > teamMeta.getMaxPlayer()) {
