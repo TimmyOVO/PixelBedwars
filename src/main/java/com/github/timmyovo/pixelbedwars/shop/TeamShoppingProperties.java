@@ -2,13 +2,20 @@ package com.github.timmyovo.pixelbedwars.shop;
 
 import com.github.timmyovo.pixelbedwars.game.GameTeam;
 import com.github.timmyovo.pixelbedwars.shop.config.EnchantmentEntry;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.potion.PotionEffect;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+@Getter
+@Setter
 public class TeamShoppingProperties {
     public EnchantmentEntry helmetEnchantment;
     public EnchantmentEntry chestplateEnchantment;
@@ -18,9 +25,11 @@ public class TeamShoppingProperties {
     public boolean healthRegenEnable;
     public boolean doubleDragonEnable;
     private Map<Integer, Integer> iconLevelMap;
+    private List<PotionEffect> potionList;
 
     public TeamShoppingProperties() {
         this.iconLevelMap = new HashMap<>();
+        this.potionList = new ArrayList<>();
     }
 
     public Integer getTeamItemLevelById(int i) {//0 没买
@@ -79,6 +88,9 @@ public class TeamShoppingProperties {
                     }
                 }
             }
+            this.potionList.forEach(potionEffect -> {
+                gamePlayer.getPlayer().addPotionEffect(potionEffect);
+            });
         });
     }
 

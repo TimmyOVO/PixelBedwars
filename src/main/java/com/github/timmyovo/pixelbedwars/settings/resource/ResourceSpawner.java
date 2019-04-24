@@ -25,6 +25,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+
 public class ResourceSpawner {
     private int spawnInterval;
     private VecLoc3D spawnerLocation;
