@@ -27,9 +27,9 @@ import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import com.github.timmyovo.pixelbedwars.shop.AbstractShop;
 import com.github.timmyovo.pixelbedwars.shop.ShopGui;
+import com.github.timmyovo.pixelbedwars.shop.TeamShopGui;
 import com.github.timmyovo.pixelbedwars.shop.category.ShopCategory;
 import com.github.timmyovo.pixelbedwars.shop.item.ShopItem;
-import com.github.timmyovo.pixelbedwars.shop.item.ShopTeamItem;
 import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -68,7 +68,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     private AbstractShop playerShop;
     private ShopGui playerShopGui;
     private AbstractShop teamShop;
-    private ShopGui teamShopGui;
+    private TeamShopGui teamShopGui;
     private BedwarsGame bedwarsGame;
     private DatabaseManager databaseManagerBase;
     private LoadingCache<Player, PlayerStatisticModel> playerPlayerStatisticModelLoadingCache;
@@ -132,6 +132,8 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     private void initGui() {
         playerShopGui = new ShopGui(playerShop);
         Bukkit.getPluginManager().registerEvents(playerShopGui, this);
+        teamShopGui = new TeamShopGui();
+        Bukkit.getPluginManager().registerEvents(teamShopGui, this);
         InventoryBuilder inventoryBuilder = InventoryBuilder.builder()
                 .displayName("队伍选择")
                 .size(9)
@@ -574,27 +576,10 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                     .motdWait("等待中")
                     .motdGaming("游戏中")
                     .motdEnd("游戏结束")
-
-                    .teamShopItems(Arrays.asList(ShopTeamItem.newBuilder()
-                            .setIcon(InventoryItem.builder()
-                                    .itemstackData(new ItemFactory(() -> new ItemStack(Material.WOOL))
-                                            .setDisplayName("§c锋利附魔")
-                                            .addLore("点击为你放所有队员的斧和剑升级锋利1!")
-                                            .addLore(" ")
-                                            .addLore("%teamshop#%")
-                                            .pack().serialize())
-                                    .build())
-                            .setRequireItem(InventoryItem.builder()
-                                    .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
-                                    .build())
-                            .setItems(Collections.singletonList(InventoryItem.builder()
-                                    .itemstackData(new ItemStack(Material.WOOL).serialize())
-                                    .build()))
-                            .setCommand("pb buy ")
-                            .build()))
                     .build();
         })
                 .registerConfiguration("language", () -> Language.builder()
+                        .teamShopDisplayName("队伍商店")
                         .playerDestroyBedMessage("玩家 %player% 摧毁了 %team% 的床!")
                         .allBedHasBeenDestroyed("所有床已经被摧毁")
                         .gameStart("游戏开始")

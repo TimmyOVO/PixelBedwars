@@ -3,9 +3,11 @@ package com.github.timmyovo.pixelbedwars.game;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.settings.Language;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
+import com.github.timmyovo.pixelbedwars.shop.TeamShoppingProperties;
 import com.google.common.collect.ImmutableMap;
 import lombok.*;
 import org.apache.commons.lang.Validate;
+import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -27,6 +29,7 @@ public class GameTeam {
     private BedwarsGame bedwarsGame;
     private TeamMeta teamMeta;
     private Team team;
+    private TeamShoppingProperties teamShoppingProperties;
 
     public void addPlayer(Player player) {
         Validate.notNull(player);
@@ -66,7 +69,7 @@ public class GameTeam {
 
     public void applyColorToLeather(ItemStack itemStack) {
         LeatherArmorMeta itemMeta = (LeatherArmorMeta) itemStack.getItemMeta();
-        itemMeta.setColor(colorFromName(getTeamMeta().getTeamColor()));
+        itemMeta.setColor(colorFromName(ChatColor.getByChar(getTeamMeta().getTeamColor().charAt(1)).name()));
         itemStack.setItemMeta(itemMeta);
     }
 

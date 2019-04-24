@@ -29,25 +29,27 @@ public class ShopItem {
     }
 
     public static boolean hasEnoughItems(Player gamePlayer, InventoryItem inventoryItem) {
+        return hasEnoughItems(gamePlayer, inventoryItem.toItemStack());
+    }
+
+    public static boolean hasEnoughItems(Player gamePlayer, ItemStack inventoryItem) {
         PlayerInventory inventory = gamePlayer.getInventory();
-        ItemStack itemStack = inventoryItem.toItemStack();
         int amountSum = 0;
         for (int i = 0; i < inventory.getContents().length; i++) {
             ItemStack content = inventory.getContents()[i];
             if (content == null) {
                 continue;
             }
-            if (content.isSimilar(itemStack)) {
+            if (content.isSimilar(inventoryItem)) {
                 amountSum += content.getAmount();
             }
         }
-        return amountSum >= itemStack.getAmount();
+        return amountSum >= inventoryItem.getAmount();
     }
 
-    public static boolean takeItem(GamePlayer gamePlayer, InventoryItem inventoryItem) {
-        ItemStack itemStack = inventoryItem.toItemStack();
+    public static boolean takeItem(Player gamePlayer, ItemStack itemStack) {
         int requireAmount = itemStack.getAmount();
-        PlayerInventory inventory = gamePlayer.getPlayer().getInventory();
+        PlayerInventory inventory = gamePlayer.getInventory();
         for (int i = 0; i < inventory.getContents().length; i++) {
             ItemStack content = inventory.getContents()[i];
             if (content == null) {
@@ -64,6 +66,14 @@ public class ShopItem {
             }
         }
         return requireAmount <= 0;
+    }
+
+    public static boolean takeItem(GamePlayer gamePlayer, ItemStack itemStack) {
+        return takeItem(gamePlayer.getPlayer(), itemStack);
+    }
+
+    public static boolean takeItem(GamePlayer gamePlayer, InventoryItem inventoryItem) {
+        return takeItem(gamePlayer, inventoryItem.toItemStack());
     }
 
     public static ShopItem fromString(String string) {

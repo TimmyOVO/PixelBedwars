@@ -1,26 +1,88 @@
 package com.github.timmyovo.pixelbedwars.shop;
 
 import com.github.timmyovo.pixelbedwars.game.GameTeam;
-import com.github.timmyovo.pixelbedwars.shop.item.ShopTeamItem;
-import com.google.common.collect.Lists;
+import com.github.timmyovo.pixelbedwars.shop.config.EnchantmentEntry;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class TeamShoppingProperties {
-    private static Map<GameTeam, List<ShopTeamItem>> teamShoppingProperties = new HashMap<>();
+    public EnchantmentEntry helmetEnchantment;
+    public EnchantmentEntry chestplateEnchantment;
+    public EnchantmentEntry leggingsEnchantment;
+    public EnchantmentEntry bootsEnchantment;
+    public EnchantmentEntry swordEnchantment;
+    public boolean healthRegenEnable;
+    public boolean doubleDragonEnable;
+    private Map<Integer, Integer> iconLevelMap;
 
-    public static List<ShopTeamItem> getTeamShopTeamItems(GameTeam gameTeam) {
-        return teamShoppingProperties.getOrDefault(gameTeam, Lists.newArrayList());
+    public TeamShoppingProperties() {
+        this.iconLevelMap = new HashMap<>();
     }
 
-    public static boolean hasTeamBuyItem(GameTeam gameTeam, ShopTeamItem shopTeamItem) {
-        return getTeamShopTeamItems(gameTeam).stream()
-                .anyMatch(shopTeamItem::equals);
+    public Integer getTeamItemLevelById(int i) {//0 没买
+        return iconLevelMap.getOrDefault(i, 0);
     }
 
-    public static void notifyTeamBuyItem(GameTeam gameTeam, ShopTeamItem shopTeamItem) {
-        getTeamShopTeamItems(gameTeam).add(shopTeamItem);
+    public void addTeamItemLevel(int i) {
+        setTeamItemLevel(i, getTeamItemLevelById(i) + 1);
+    }
+
+    public void setTeamItemLevel(int i, int s) {
+        this.iconLevelMap.put(i, s);
+    }
+
+    public void notifyTeamEquipmentChange(GameTeam playerTeam) {
+        playerTeam.getAlivePlayers().forEach(gamePlayer -> {
+            PlayerInventory inventory = gamePlayer.getPlayer().getInventory();
+            if (helmetEnchantment != null) {
+                inventory.getHelmet().getEnchantments()
+                        .entrySet()
+                        .stream()
+                        .map(Map.Entry::getKey)
+                        .forEach(enchantment -> inventory.getHelmet().removeEnchantment(enchantment));
+                inventory.getHelmet().addUnsafeEnchantment(Enchantment.getByName(helmetEnchantment.getName()), helmetEnchantment.getLevel());
+            }
+            if (chestplateEnchantment != null) {
+                inventory.getChestplate().getEnchantments()
+                        .entrySet()
+                        .stream()
+                        .map(Map.Entry::getKey)
+                        .forEach(enchantment -> inventory.getChestplate().removeEnchantment(enchantment));
+                inventory.getChestplate().addUnsafeEnchantment(Enchantment.getByName(chestplateEnchantment.getName()), chestplateEnchantment.getLevel());
+            }
+            if (leggingsEnchantment != null) {
+                inventory.getLeggings().getEnchantments()
+                        .entrySet()
+                        .stream()
+                        .map(Map.Entry::getKey)
+                        .forEach(enchantment -> inventory.getLeggings().removeEnchantment(enchantment));
+                inventory.getLeggings().addUnsafeEnchantment(Enchantment.getByName(leggingsEnchantment.getName()), leggingsEnchantment.getLevel());
+            }
+            if (bootsEnchantment != null) {
+                inventory.getBoots().getEnchantments()
+                        .entrySet()
+                        .stream()
+                        .map(Map.Entry::getKey)
+                        .forEach(enchantment -> inventory.getBoots().removeEnchantment(enchantment));
+                inventory.getBoots().addUnsafeEnchantment(Enchantment.getByName(bootsEnchantment.getName()), bootsEnchantment.getLevel());
+            }
+            if (swordEnchantment != null) {
+                for (ItemStack content : inventory.getContents()) {
+                    if (content != null) {
+                        if (isSword(content)) {
+                            content.addUnsafeEnchantment(Enchantment.getByName(swordEnchantment.getName()), swordEnchantment.getLevel());
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    public boolean isSword(ItemStack itemStack) {
+        return itemStack.getType().name().contains("SWORD") || itemStack.getType().name().contains("AXE");
     }
 }

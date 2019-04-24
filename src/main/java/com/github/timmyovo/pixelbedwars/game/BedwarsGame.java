@@ -12,6 +12,7 @@ import com.github.timmyovo.pixelbedwars.settings.GameSetting;
 import com.github.timmyovo.pixelbedwars.settings.Language;
 import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
+import com.github.timmyovo.pixelbedwars.shop.TeamShoppingProperties;
 import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -113,7 +114,7 @@ public class BedwarsGame implements Listener {
                     team.setAllowFriendlyFire(false);
                     team.setPrefix(teamMeta.getTeamColor() + teamMeta.getTeamName());
                     team.setNameTagVisibility(NameTagVisibility.ALWAYS);
-                    return new GameTeam(this, teamMeta, team);
+                    return new GameTeam(this, teamMeta, team, new TeamShoppingProperties());
                 })
                 .collect(Collectors.toList());
         this.gameStartCounter = gameSetting.getWaitTime();

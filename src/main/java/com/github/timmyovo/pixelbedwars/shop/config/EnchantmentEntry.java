@@ -11,11 +11,16 @@ import org.bukkit.inventory.ItemStack;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class EnchantmentEntry {
+public class EnchantmentEntry implements Cloneable {
     private String name;
     private int level;
 
     public void applyEnchantment(ItemStack itemStack) {
         itemStack.addUnsafeEnchantment(Enchantment.getByName(name), level);
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return new EnchantmentEntry(getName(), getLevel());
     }
 }
