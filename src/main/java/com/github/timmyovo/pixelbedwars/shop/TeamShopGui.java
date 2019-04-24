@@ -111,7 +111,6 @@ public class TeamShopGui implements Listener {
                 } else {
                     itemFactory.addLore("§c没有足够的物品");
                 }
-                setLore(itemFactory, 1, "§a为你方所有人员的护腿和靴子添加保护Ⅰ! §b5钻石");
                 break;
             case 1:
                 if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 10))) {
@@ -120,10 +119,18 @@ public class TeamShopGui implements Listener {
                     itemFactory.addLore("§c没有足够的物品");
                 }
                 setLore(itemFactory, 1, "§a为你方所有人员的护腿和靴子添加保护Ⅰ! §b5钻石");
+                break;
+            case 2:
+                if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 20))) {
+                    itemFactory.addLore("§a购买可用");
+                } else {
+                    itemFactory.addLore("§c没有足够的物品");
+                }
+                setLore(itemFactory, 1, "§a为你方所有人员的护腿和靴子添加保护Ⅰ! §b5钻石");
                 setLore(itemFactory, 2, "§a为你方所有人员的护腿和靴子添加保护Ⅱ! §b10钻石");
                 break;
             case 3:
-                if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 20))) {
+                if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 30))) {
                     itemFactory.addLore("§a购买可用");
                 } else {
                     itemFactory.addLore("§c没有足够的物品");
@@ -133,11 +140,7 @@ public class TeamShopGui implements Listener {
                 setLore(itemFactory, 3, "§a为你方所有人员的护腿和靴子添加保护Ⅲ! §b20钻石");
                 break;
             case 4:
-                if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 30))) {
-                    itemFactory.addLore("§a购买可用");
-                } else {
-                    itemFactory.addLore("§c没有足够的物品");
-                }
+                itemFactory.addLore("§a已全部购买");
                 setLore(itemFactory, 1, "§a为你方所有人员的护腿和靴子添加保护Ⅰ! §b5钻石");
                 setLore(itemFactory, 2, "§a为你方所有人员的护腿和靴子添加保护Ⅱ! §b10钻石");
                 setLore(itemFactory, 3, "§a为你方所有人员的护腿和靴子添加保护Ⅲ! §b20钻石");
@@ -163,7 +166,6 @@ public class TeamShopGui implements Listener {
                 } else {
                     itemFactory.addLore("§c没有足够的物品");
                 }
-                setLore(itemFactory, 1, "§a为你方所有人员添加急迫Ⅰ! §b4钻石");
                 break;
             case 1:
                 if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 6))) {
@@ -171,6 +173,10 @@ public class TeamShopGui implements Listener {
                 } else {
                     itemFactory.addLore("§c没有足够的物品");
                 }
+                setLore(itemFactory, 1, "§a为你方所有人员添加急迫Ⅰ! §b4钻石");
+                break;
+            case 2:
+                itemFactory.addLore("§a已全部购买");
                 setLore(itemFactory, 1, "§a为你方所有人员添加急迫Ⅰ! §b4钻石");
                 setLore(itemFactory, 2, "§a为你方所有人员添加急迫Ⅱ! §b6钻石");
                 break;
@@ -182,7 +188,7 @@ public class TeamShopGui implements Listener {
         TeamShoppingProperties teamShoppingProperties = gameTeam.getTeamShoppingProperties();
         Integer level = teamShoppingProperties.getTeamItemLevelById(4);//资源刷新率
         ItemFactory itemFactory = new ItemFactory(() -> new ItemStack(Material.FURNACE));
-        itemFactory.setDisplayName("§c团队保护");
+        itemFactory.setDisplayName("§c熔炉升级");
         itemFactory.addLore(" ");
         itemFactory.addLore("§71阶:+50%资源! §b4钻石");
         itemFactory.addLore("§72阶:+100%资源! §b8钻石");
@@ -196,7 +202,6 @@ public class TeamShopGui implements Listener {
                 } else {
                     itemFactory.addLore("§c没有足够的物品");
                 }
-                setLore(itemFactory, 1, "§a1阶:+50%资源! §b4钻石");
                 break;
             case 1:
                 if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 8))) {
@@ -205,10 +210,18 @@ public class TeamShopGui implements Listener {
                     itemFactory.addLore("§c没有足够的物品");
                 }
                 setLore(itemFactory, 1, "§a1阶:+50%资源! §b4钻石");
+                break;
+            case 2:
+                if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 12))) {
+                    itemFactory.addLore("§a购买可用");
+                } else {
+                    itemFactory.addLore("§c没有足够的物品");
+                }
+                setLore(itemFactory, 1, "§a1阶:+50%资源! §b4钻石");
                 setLore(itemFactory, 2, "§a2阶:+100%资源! §b8钻石");
                 break;
             case 3:
-                if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 12))) {
+                if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 16))) {
                     itemFactory.addLore("§a购买可用");
                 } else {
                     itemFactory.addLore("§c没有足够的物品");
@@ -218,11 +231,7 @@ public class TeamShopGui implements Listener {
                 setLore(itemFactory, 3, "§a3阶:生成绿宝石! §b12钻石");
                 break;
             case 4:
-                if (ShopItem.hasEnoughItems(player, new ItemStack(Material.DIAMOND, 16))) {
-                    itemFactory.addLore("§a购买可用");
-                } else {
-                    itemFactory.addLore("§c没有足够的物品");
-                }
+                itemFactory.addLore("§a已全部购买");
                 setLore(itemFactory, 1, "§a1阶:+50%资源! §b4钻石");
                 setLore(itemFactory, 2, "§a2阶:+100%资源! §b8钻石");
                 setLore(itemFactory, 3, "§a3阶:生成绿宝石! §b12钻石");
@@ -422,12 +431,13 @@ public class TeamShopGui implements Listener {
             player.sendMessage("你已经购买过了");
             return;
         }
-        PotionEffect potionEffect = new PotionEffect(PotionEffectType.FAST_DIGGING, 9999, 1, true);
+
         switch (level) {
             case 0://1
                 ItemStack inventoryItem = new ItemStack(Material.DIAMOND, 4);
                 if (ShopItem.hasEnoughItems(player, inventoryItem)) {
                     ShopItem.takeItem(player, inventoryItem);
+                    PotionEffect potionEffect = new PotionEffect(PotionEffectType.FAST_DIGGING, 99999, 1, true);
                     teamShoppingProperties.setTeamItemLevel(3, 1);
                     teamShoppingProperties.getPotionList().add(potionEffect);
                     teamShoppingProperties.notifyTeamEquipmentChange(playerTeam);
@@ -440,7 +450,7 @@ public class TeamShopGui implements Listener {
                 ItemStack inventoryItem1 = new ItemStack(Material.DIAMOND, 6);
                 if (ShopItem.hasEnoughItems(player, inventoryItem1)) {
                     ShopItem.takeItem(player, inventoryItem1);
-                    PotionEffect potionEffect2 = new PotionEffect(PotionEffectType.FAST_DIGGING, 9999, 2, true);
+                    PotionEffect potionEffect2 = new PotionEffect(PotionEffectType.FAST_DIGGING, 99999, 2, true);
                     teamShoppingProperties.getPotionList().add(potionEffect2);
                     teamShoppingProperties.setTeamItemLevel(3, 2);
                     teamShoppingProperties.notifyTeamEquipmentChange(playerTeam);

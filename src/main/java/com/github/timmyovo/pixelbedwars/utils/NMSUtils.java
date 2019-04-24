@@ -42,6 +42,15 @@ public class NMSUtils {
         classToIDMapping.put(clazz, Integer.valueOf(id));
     }
 
+    public static void addAIToEntity(Entity entity, PathfinderGoal pathfinderGoal) {
+        net.minecraft.server.v1_8_R3.Entity handle = ((CraftEntity) entity).getHandle();
+        if (!(handle instanceof EntityInsentient)) {
+            return;
+        }
+        PathfinderGoalSelector targetSelector = ((EntityInsentient) handle).goalSelector;
+        targetSelector.a(0, pathfinderGoal);
+    }
+
     public static void clearEntityAI(Entity entity) {
         net.minecraft.server.v1_8_R3.Entity handle = ((CraftEntity) entity).getHandle();
         if (!(handle instanceof EntityInsentient)) {

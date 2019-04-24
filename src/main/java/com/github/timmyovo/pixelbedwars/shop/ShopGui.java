@@ -28,11 +28,11 @@ import org.bukkit.inventory.ItemStack;
 public class ShopGui implements Listener {
     public static final String SHOP_ITEM_KEY = "SHOP_ITEM";
     public static final String CATEGORY_KEY = "CATEGORY";
-    private AbstractShop shop;
+    private PlayerShop shop;
     private BedwarsGame bedwarsGame;
     private Inventory inventory;
 
-    public ShopGui(AbstractShop shop) {
+    public ShopGui(PlayerShop shop) {
         this.shop = shop;
         this.bedwarsGame = PixelBedwars.getPixelBedwars().getBedwarsGame();
         this.inventory = Bukkit.createInventory(null, 54, shop.getDisplayName());
@@ -52,6 +52,7 @@ public class ShopGui implements Listener {
             nmsCopy.getTag().setString(CATEGORY_KEY, shopCategory.toString());
             inventory.setItem(i, CraftItemStack.asBukkitCopy(nmsCopy));
         });
+        shop.getCategoryItems().get(0).applyToInventory(inventory);
     }
 
     public void show(Player gamePlayer) {

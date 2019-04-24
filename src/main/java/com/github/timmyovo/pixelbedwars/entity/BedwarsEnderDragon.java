@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class BedwarsEnderDragon extends EntityEnderDragon {
     private BedwarsGame bedwarsGame;
@@ -34,15 +35,24 @@ public class BedwarsEnderDragon extends EntityEnderDragon {
     @Override
     public void m() {
         if (!(target instanceof Player)) {
-            List<GamePlayer> alivePlayers = new ArrayList<>(bedwarsGame.getTeamList()
+            List<GameTeam> collect = bedwarsGame.getTeamList()
                     .stream()
                     .filter(gameTeam1 -> !gameTeam1.equals(gameTeam))
                     .sorted()
-                    .findAny()
-                    .orElse(bedwarsGame.getTeamList().get(0))
-                    .getAlivePlayers());
-            Collections.shuffle(alivePlayers);
-            target = ((CraftPlayer) alivePlayers.get(0).getPlayer()).getHandle();
+                    .collect(Collectors.toList());
+            Collections.shuffle(collect);
+            if (collect.isEmpty()) {
+                target = null;
+            } else {
+                List<GamePlayer> alivePlayers = new ArrayList<>(collect.get(0).getAlivePlayers());
+                if (alivePlayers.isEmpty()) {
+                    target = null;
+                } else {
+                    Collections.shuffle(alivePlayers);
+                    target = ((CraftPlayer) alivePlayers.get(0).getPlayer()).getHandle();
+                }
+
+            }
         }
         super.m();
     }

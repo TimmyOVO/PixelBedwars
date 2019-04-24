@@ -6,6 +6,7 @@ import com.github.skystardust.ultracore.bukkit.modules.item.ItemFactory;
 import com.github.skystardust.ultracore.core.database.newgen.DatabaseManager;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
+import com.github.timmyovo.pixelbedwars.entity.BedwarsEgg;
 import com.github.timmyovo.pixelbedwars.entity.BedwarsEnderDragon;
 import com.github.timmyovo.pixelbedwars.entity.Corpses;
 import com.github.timmyovo.pixelbedwars.entity.CorpsesManager;
@@ -15,6 +16,8 @@ import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import com.github.timmyovo.pixelbedwars.shop.TeamShoppingProperties;
 import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
+import com.gmail.filoghost.holographicdisplays.api.Hologram;
+import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteArrayDataOutput;
@@ -28,22 +31,22 @@ import org.bukkit.*;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_8_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_8_R3.util.CraftChatMessage;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.FoodLevelChangeEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.server.ServerListPingEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
@@ -51,11 +54,14 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.NameTagVisibility;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
+import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -200,6 +206,17 @@ public class BedwarsGame implements Listener {
                 BedwarsGame.this.getGamePlayers().stream()
                         .map(GamePlayer::getPlayer)
                         .forEach(player -> {
+                            if (isPlayerInvisible(player)) {
+                                getGamePlayers().forEach(gamePlayer -> {
+                                    gamePlayer.getPlayer().hidePlayer(player);
+                                });
+                            } else {
+                                getGamePlayers().forEach(gamePlayer -> {
+                                    if (!gamePlayer.getPlayer().canSee(player)) {
+                                        gamePlayer.getPlayer().showPlayer(player);
+                                    }
+                                });
+                            }
                             sendActionbar(player, language.getGamingActionbar());
                         });
                 getTeamList().stream()
@@ -234,6 +251,35 @@ public class BedwarsGame implements Listener {
         return this;
     }
 
+    public void doShopInit() {
+        getGameSetting().getPlayerShopEntityList().forEach(vecLoc3D -> {
+            Location location1 = vecLoc3D.toBukkitLocation();
+            checkChunk(location1);
+            EntityType entityType = PixelBedwars.getPixelBedwars().getPlayerShop().getEntityType();
+            Entity entity = location1.getWorld().spawnEntity(location1, entityType);
+            Hologram hologram = HologramsAPI.createHologram(PixelBedwars.getPixelBedwars(), location1.add(0, 3, 0));
+            getLanguage().getPlayerShopHologramTexts().forEach(hologram::appendTextLine);
+            NMSUtils.clearEntityAI(entity);
+            net.minecraft.server.v1_8_R3.Entity handle = ((CraftEntity) entity).getHandle();
+            if (handle instanceof EntityInsentient) {
+                NMSUtils.addAIToEntity(entity, new PathfinderGoalLookAtPlayer(((EntityInsentient) handle), EntityPlayer.class, 8));
+            }
+        });
+        getGameSetting().getTeamShopEntityList().forEach(vecLoc3D -> {
+            Location location1 = vecLoc3D.toBukkitLocation();
+            checkChunk(location1);
+            EntityType teamGuiEntityType = getGameSetting().getTeamGuiEntityType();
+            Entity entity = location1.getWorld().spawnEntity(location1, teamGuiEntityType);
+            Hologram hologram = HologramsAPI.createHologram(PixelBedwars.getPixelBedwars(), location1.add(0, 3, 0));
+            getLanguage().getTeamShopHologramTexts().forEach(hologram::appendTextLine);
+            NMSUtils.clearEntityAI(entity);
+            net.minecraft.server.v1_8_R3.Entity handle = ((CraftEntity) entity).getHandle();
+            if (handle instanceof EntityInsentient) {
+                NMSUtils.addAIToEntity(entity, new PathfinderGoalLookAtPlayer(((EntityInsentient) handle), EntityPlayer.class, 8));
+            }
+        });
+    }
+
     public StageEntry getNextStage() {
         return getGameSetting().getStageEntryList()
                 .stream()
@@ -261,12 +307,20 @@ public class BedwarsGame implements Listener {
                 .forEach(player -> sendTitle(player, string));
     }
 
-    private void randomPlayerInventoryItem(Player player) {
-        /*gameSetting.getRandomInventoryItemListList().stream()
-                .filter(randomInventoryItem -> new Random().nextInt(100) <= randomInventoryItem.getChance())
-                .forEach(randomInventoryItem -> randomInventoryItem.getRandomInventoryItemList().forEach(rr -> {
-                    player.getInventory().addItem(rr.getItems().toItemStack());
-                }));*/
+    private void clearPlayerInventory(Player player) {
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack itemStack = contents[i];
+            if (itemStack != null) {
+                if (itemStack.hasItemMeta()) {
+                    if (itemStack.getItemMeta().hasLore()) {
+                        if (itemStack.getItemMeta().getLore().stream().noneMatch(s -> s.contains("无法掉落"))) {
+                            player.getInventory().setItem(i, new ItemStack(Material.AIR));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public void endGame() {
@@ -277,6 +331,10 @@ public class BedwarsGame implements Listener {
         broadcastMessage(language.getGameEndMessage(), null);
         calWinner();
         calStatistic();
+        this.getGamePlayers().forEach(gamePlayer -> {
+            gamePlayer.getPlayer().setGameMode(GameMode.SPECTATOR);
+            gamePlayer.getPlayer().teleport(gameSetting.getPlayerRespawnWaitLocation().toBukkitLocation());
+        });
         this.getGamePlayers().stream()
                 .map(GamePlayer::getPlayer)
                 .forEach(this::sendToHub);
@@ -296,6 +354,8 @@ public class BedwarsGame implements Listener {
                 PlayerStatisticModel playerStatistic = pixelBedwars.getPlayerStatistic(gamePlayer.getPlayer());
                 playerStatistic.setKills(playerStatistic.getKills() + gamePlayer.getKills());
                 playerStatistic.setDeath(playerStatistic.getDeath() + gamePlayer.getDeath());
+                playerStatistic.setFinalKills(playerStatistic.getFinalKills() + gamePlayer.getFinalKills());
+                playerStatistic.setBedDestroy(playerStatistic.getFinalKills() + gamePlayer.getKills());
                 return playerStatistic;
             });
         });
@@ -370,10 +430,6 @@ public class BedwarsGame implements Listener {
     public void resetPlayer(Player player) {
         player.setMaxHealth(20);
         player.getInventory().clear();
-        player.getInventory().setHelmet(new ItemStack(Material.AIR));
-        player.getInventory().setChestplate(new ItemStack(Material.AIR));
-        player.getInventory().setLeggings(new ItemStack(Material.AIR));
-        player.getInventory().setBoots(new ItemStack(Material.AIR));
         player.setLevel(0);
         player.setTotalExperience(0);
     }
@@ -400,8 +456,6 @@ public class BedwarsGame implements Listener {
         }
         Location borderCenterLocation = gameSetting.getPlayerRespawnWaitLocation().toBukkitLocation();
         checkChunk(borderCenterLocation);
-        WorldBorder worldBorder = borderCenterLocation.getWorld().getWorldBorder();
-        worldBorder.setCenter(borderCenterLocation);
         this.getGamePlayers().forEach(gamePlayer -> {
             Player player = gamePlayer.getPlayer();
             if (getPlayerTeam(gamePlayer.getPlayer()) == null) {
@@ -412,12 +466,13 @@ public class BedwarsGame implements Listener {
             checkChunk(location);
             player.teleport(location);
             setPlayerInvulnerability(player, false);
-            randomPlayerInventoryItem(player);
+            clearPlayerInventory(player);
             player.setMaxHealth(gameSetting.getPlayerMaxHealth());
             player.setHealth(player.getMaxHealth());
             InventoryFactory.unlockAllPlayerInventory(player);
         });
         broadcastMessage(language.getGameStart(), null);
+        doShopInit();
         this.gameState = GameState.GAMING;
     }
 
@@ -466,6 +521,15 @@ public class BedwarsGame implements Listener {
         }
         if (this.getGamePlayers().size() + 1 > gameSetting.getMaxPlayer()) {
             player.setGameMode(GameMode.SPECTATOR);
+            player.setFlying(true);
+            return;
+        }
+        if (this.getGamePlayers().size() + 1 > gameSetting.getTeamMetaList()
+                .stream()
+                .mapToInt(TeamMeta::getMaxPlayer)
+                .sum()) {
+            player.setGameMode(GameMode.SPECTATOR);
+            player.setFlying(true);
             return;
         }
         PixelBedwars.getPixelBedwars().getCorpsesManager()
@@ -515,6 +579,7 @@ public class BedwarsGame implements Listener {
 
     public void playerDestroyBed(Player player, GameTeam gameTeam) {
         String playerDestroyBedMessage = getLanguage().getPlayerDestroyBedMessage();
+        getBedwarsPlayer(player).addBedDestroyed();
         sendMessage(player, playerDestroyBedMessage, ImmutableMap.of("%player%", player.getName(), "%team%", gameTeam.getTeamMeta().getTeamName()));
     }
 
@@ -523,8 +588,41 @@ public class BedwarsGame implements Listener {
     }
 
     @EventHandler
+    public void onEntityExplode(EntityExplodeEvent entityExplodeEvent) {
+        entityExplodeEvent.blockList()
+                .removeIf(block -> {
+                    return getTeamList().stream()
+                            .map(GameTeam::getTeamMeta)
+                            .map(TeamMeta::getTeamGameLocation)
+                            .map(VecLoc3D::toBukkitLocation)
+                            .anyMatch(location -> location.distance(block.getLocation()) <= 8) || block.getType() == Material.BED_BLOCK || block.getType() == Material.STAINED_GLASS;
+                });
+    }
+
+    @EventHandler
+    public void onEntityExplode(BlockExplodeEvent blockExplodeEvent) {
+        blockExplodeEvent.blockList()
+                .removeIf(block -> {
+                    return getTeamList().stream()
+                            .map(GameTeam::getTeamMeta)
+                            .map(TeamMeta::getTeamGameLocation)
+                            .map(VecLoc3D::toBukkitLocation)
+                            .anyMatch(location -> location.distance(block.getLocation()) <= 8) || block.getType() == Material.BED_BLOCK || block.getType() == Material.STAINED_GLASS;
+                });
+    }
+
+    @EventHandler
     public void onBlockPlace(BlockPlaceEvent blockPlaceEvent) {
         Player player = blockPlaceEvent.getPlayer();
+        Block blockPlaced = blockPlaceEvent.getBlockPlaced();
+        if (getTeamList().stream()
+                .map(GameTeam::getTeamMeta)
+                .map(TeamMeta::getTeamGameLocation)
+                .map(VecLoc3D::toBukkitLocation)
+                .anyMatch(location -> location.distance(blockPlaced.getLocation()) <= 8)) {
+            blockPlaceEvent.setCancelled(true);
+            return;
+        }
         markBlockBreakable(blockPlaceEvent.getBlock());
         if (hasPlayer(player) && gameState != GameState.GAMING) {
             blockPlaceEvent.setCancelled(true);
@@ -567,6 +665,9 @@ public class BedwarsGame implements Listener {
             if (hasPlayer(player)) {
                 if (gameState == GameState.WAITING) {
                     player.teleport(gameSetting.getPlayerWaitLocation().toBukkitLocation());
+                }
+                if (gameState == GameState.GAMING) {
+                    player.setHealth(0);
                 }
             }
         }
@@ -622,7 +723,9 @@ public class BedwarsGame implements Listener {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent playerDeathEvent) {
         Player entity = playerDeathEvent.getEntity();
+        playerDeathEvent.setKeepInventory(true);
         if (hasPlayer(entity)) {
+            playerDeathEvent.setDeathMessage(null);
             GamePlayer gamePlayer = getBedwarsPlayer(entity);
             gamePlayer.addDeath();
             EntityLiving lastDamager = ((CraftPlayer) gamePlayer.getPlayer()).getHandle().lastDamager;
@@ -631,7 +734,11 @@ public class BedwarsGame implements Listener {
                     CraftPlayer bukkitEntity = (CraftPlayer) lastDamager.getBukkitEntity();
                     GamePlayer player = getBedwarsPlayer(bukkitEntity);
                     if (player != null) {
-                        player.addKill();
+                        if (isTeamDead(getPlayerTeam(entity))) {
+                            player.addFinalKills();
+                        } else {
+                            player.addKill();
+                        }
                         broadcastMessage(language.getPlayerKillOthersMessage(), ImmutableMap.of("%killer%", player.getPlayer().getDisplayName(), "%player%", entity.getDisplayName()));
                     }
                 }
@@ -674,7 +781,9 @@ public class BedwarsGame implements Listener {
             playerCorpseDataMap.remove(player.getUniqueId());
         }
         getBedwarsPlayer(player).setRespawning(false);
-        randomPlayerInventoryItem(player);
+        clearPlayerInventory(player);
+        GameTeam playerTeam = getPlayerTeam(player);
+        playerTeam.getTeamShoppingProperties().notifyTeamEquipmentChange(playerTeam);
         //todo 发送复活消息
     }
 
@@ -763,20 +872,12 @@ public class BedwarsGame implements Listener {
             return;
         }
 
-        if (teamByName.getTeam().getSize() - gameTeam.getTeam().getSize() >= 1) {
-            sendMessage(gamePlayer, language.getCanNotSwitchGameBalance(), null);
-            return;
-        }
-
         if (playerTeam == null) {
             teamByName.addPlayer(player);
             return;
         }
         if (playerTeam.getTeamMeta().getTeamName().equals(teamName)) {
             sendMessage(gamePlayer, language.getCanNotSwitchToCurrent(), null);
-            return;
-        }
-        if (playerTeam.getTeam().getSize() == 1) {
             return;
         }
         playerTeam.removePlayer(player);
@@ -925,6 +1026,7 @@ public class BedwarsGame implements Listener {
                 .map(TeamMeta::getTeamBedLocation)
                 .map(VecLoc3D::toBukkitLocation)
                 .map(Location::getBlock)
+                .filter(Objects::nonNull)
                 .forEach(Block::breakNaturally);
     }
 
@@ -943,4 +1045,66 @@ public class BedwarsGame implements Listener {
             e.spawnEntity(location);
         });
     }
+
+    @EventHandler
+    public void onPlayerUsePotion(PlayerItemConsumeEvent playerItemConsumeEvent) {
+        ItemStack item = playerItemConsumeEvent.getItem();
+        if (item.getType() == Material.POTION && item.getDurability() == 8270) {
+            Player player = playerItemConsumeEvent.getPlayer();
+            setPlayerInvisible(player, true);
+            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 30, 1, false));
+            player.sendMessage("你隐身了!");
+            Bukkit.getScheduler().runTaskLater(PixelBedwars.getPixelBedwars(), () -> {
+                setPlayerInvisible(player, false);
+            }, 30 * 20L);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerDamageByOthers(EntityDamageByEntityEvent entityDamageByEntityEvent) {
+        Entity damager = entityDamageByEntityEvent.getDamager();
+        Entity victim = entityDamageByEntityEvent.getEntity();
+        if (!(victim instanceof Player)) {
+            return;
+        }
+        Player victimPlayer = (Player) victim;
+        if (isPlayerInvisible(victimPlayer)) {
+            setPlayerInvisible(victimPlayer, false);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerTargetOthers(PlayerInteractEvent playerInteractEvent) {
+        Player player = playerInteractEvent.getPlayer();
+        if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_AIR || playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            if (player.getItemInHand().getType() == Material.EGG) {
+                playerInteractEvent.setCancelled(true);
+                BedwarsEgg.shoot(player.getWorld(), player, getPlayerTeam(player).getTeamMeta());
+                ItemStack itemInHand = player.getItemInHand();
+                itemInHand.setAmount(itemInHand.getAmount() - 1);
+                player.setItemInHand(itemInHand);
+            }
+        }
+    }
+
+    private boolean getLookingAt(Player player, Player player1) {
+        Location eye = player.getEyeLocation();
+        Vector toEntity = player1.getEyeLocation().toVector().subtract(eye.toVector());
+        double dot = toEntity.normalize().dot(eye.getDirection());
+
+        return dot > 0.99D;
+    }
+
+    public void setPlayerInvisible(Player player, boolean t) {
+        if (t) {
+            player.setMetadata("INVISIBLE", new FixedMetadataValue(PixelBedwars.getPixelBedwars(), true));
+        } else {
+            player.removeMetadata("INVISIBLE", PixelBedwars.getPixelBedwars());
+        }
+    }
+
+    public boolean isPlayerInvisible(Player player) {
+        return player.hasMetadata("INVISIBLE");
+    }
+
 }

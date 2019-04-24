@@ -3,6 +3,7 @@ package com.github.timmyovo.pixelbedwars.hook;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
 import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
+import com.github.timmyovo.pixelbedwars.game.GamePlayer;
 import com.github.timmyovo.pixelbedwars.game.GameTeam;
 import com.github.timmyovo.pixelbedwars.settings.Language;
 import me.clip.placeholderapi.external.EZPlaceholderHook;
@@ -70,14 +71,24 @@ public class PlaceholderHook extends EZPlaceholderHook {
                 try {
                     String teamName = split[1];
                     GameTeam teamByName = bedwarsGame.getTeamByName(teamName);
+                    StringBuilder result = new StringBuilder("§l");
+
                     if (bedwarsGame.isTeamDead(teamByName)) {
-                        return "§l" + ChatColor.RED + "✘";
+                        result.append(ChatColor.RED);
+                        result.append("✘");
                     }
                     if (teamByName.isBedDestroyed()) {
-                        return "§l" + ChatColor.GREEN + String.valueOf(teamByName.getAlivePlayers().size());
+                        result.append(ChatColor.GREEN);
+                        result.append(String.valueOf(teamByName.getAlivePlayers().size()));
                     } else {
-                        return "§l" + ChatColor.GREEN + "✔";
+                        result.append(ChatColor.GREEN);
+                        result.append("✔");
                     }
+                    if (bedwarsGame.getPlayerTeam(player).equals(teamByName)) {
+                        result.append(ChatColor.GRAY);
+                        result.append("你");
+                    }
+                    return result.toString();
                 } catch (NullPointerException e) {
                     return "#ERROR_WHEN_FIND_TEAM";
                 }
@@ -87,7 +98,7 @@ public class PlaceholderHook extends EZPlaceholderHook {
             if (s.contains("#")) {
                 String[] split = s.split("#");
                 String infoField = split[1];
-                PlayerStatisticModel playerStatistic = PixelBedwars.getPixelBedwars().getPlayerStatistic(player);
+                GamePlayer playerStatistic = PixelBedwars.getPixelBedwars().getBedwarsGame().getBedwarsPlayer(player);
                 if (playerStatistic == null) {
                     return "#ERROR_INFO";
                 }

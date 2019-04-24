@@ -1,5 +1,6 @@
 package com.github.timmyovo.pixelbedwars.game;
 
+import com.github.skystardust.ultracore.bukkit.modules.item.ItemFactory;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.settings.Language;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
@@ -52,18 +53,27 @@ public class GameTeam {
         applyPlayerTeamEquipment(player);
     }
 
+    public static void disableItemDrop(ItemStack itemStack) {
+        itemStack.setItemMeta(new ItemFactory(() -> itemStack)
+                .addLore("无法掉落").getItemMeta());
+    }
+
     public void applyPlayerTeamEquipment(Player player) {
         PlayerInventory inventory = player.getInventory();
         ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
+        disableItemDrop(helmet);
         applyColorToLeather(helmet);
         inventory.setHelmet(helmet);
         ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE);
+        disableItemDrop(chestplate);
         applyColorToLeather(chestplate);
         inventory.setChestplate(chestplate);
         ItemStack leggings = new ItemStack(Material.LEATHER_LEGGINGS);
+        disableItemDrop(leggings);
         applyColorToLeather(leggings);
         inventory.setLeggings(leggings);
         ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
+        disableItemDrop(boots);
         applyColorToLeather(boots);
         inventory.setBoots(boots);
     }

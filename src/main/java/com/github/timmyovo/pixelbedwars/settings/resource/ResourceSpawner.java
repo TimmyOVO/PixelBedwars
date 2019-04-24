@@ -78,7 +78,9 @@ public class ResourceSpawner {
                 if (entityArmorStand == null) {
                     this.entityArmorStand = (ArmorStand) source.getWorld().spawnEntity(source.clone().add(0, 2, 0), EntityType.ARMOR_STAND);
                     this.entityArmorStand.setVisible(false);
-                    this.entityArmorStand.setHelmet(new ItemStack(hologramIcon));
+                    if (hologramIcon != null) {
+                        this.entityArmorStand.setHelmet(new ItemStack(hologramIcon));
+                    }
                     this.entityArmorStand.setGravity(false);
                 } else {
                     Location location = entityArmorStand.getLocation();
@@ -110,7 +112,7 @@ public class ResourceSpawner {
         if (multiplier == 0) {
             multiplier = 1;
         }
-        if (remainTicks == 0) {
+        if (remainTicks <= 0) {
             remainTicks = (spawnInterval * 20);
             source.getWorld().dropItem(source, itemToSpawn.toItemStack());
             return;

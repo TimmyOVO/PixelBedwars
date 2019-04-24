@@ -1,10 +1,10 @@
 package com.github.timmyovo.pixelbedwars.utils;
 
+import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,50 +13,45 @@ import java.util.Set;
 
 public class ScoreboardUtils {
     public static boolean rankedSidebarDisplay(Player p, String title, Map<String, Integer> elements) {
-        /*title = ChatColor.translateAlternateColorCodes('&', title);
-        title = cutRankedTitle(title);
-        elements = cutRanked(elements);
-        Scoreboard scoreboard;
-        if (Bukkit.getScoreboardManager().getMainScoreboard() != null) {
-            scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
-        } else {
-            scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
-        }
-        p.setScoreboard(scoreboard);
-        String substring = p.getUniqueId().toString().substring(0, 16);
-        Objective objective = scoreboard.getObjective(substring);
-        if (objective != null) {
-            objective.unregister();
-        }
-        objective = scoreboard.registerNewObjective(substring, "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(title);
-        for (Map.Entry<String, Integer> stringIntegerEntry : elements.entrySet()) {
-            objective.getScore(stringIntegerEntry.getKey()).setScore(stringIntegerEntry.getValue());
-        }
-        return true;*/
         try {
             title = ChatColor.translateAlternateColorCodes('&', title);
             title = cutRankedTitle(title);
             elements = cutRanked(elements);
-            if (p.getScoreboard() == null || p.getScoreboard() == Bukkit.getScoreboardManager().getMainScoreboard() || p.getScoreboard().getObjectives().size() != 1) {
-                p.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+            Scoreboard scoreboard = p.getScoreboard();
+            if (scoreboard == null || scoreboard == Bukkit.getScoreboardManager().getMainScoreboard() || scoreboard.getObjectives().size() != 1) {
+                scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+                p.setScoreboard(scoreboard);
             }
-            if (p.getScoreboard().getObjective(p.getUniqueId().toString().substring(0, 16)) == null) {
-                p.getScoreboard().registerNewObjective(p.getUniqueId().toString().substring(0, 16), "dummy");
-                p.getScoreboard().getObjective(p.getUniqueId().toString().substring(0, 16)).setDisplaySlot(DisplaySlot.SIDEBAR);
+            Scoreboard finalScoreboard = scoreboard;
+            PixelBedwars.getPixelBedwars().getBedwarsGame().getTeamList()
+                    .forEach(gameTeam -> {
+                        Team finalScoreboardTeam = finalScoreboard.getTeam(gameTeam.getTeam().getName());
+                        if (finalScoreboardTeam == null) {
+                            Team team = finalScoreboard.registerNewTeam(gameTeam.getTeam().getName());
+                            team.setAllowFriendlyFire(false);
+                            team.setPrefix(gameTeam.getTeam().getPrefix());
+                            team.setNameTagVisibility(NameTagVisibility.ALWAYS);
+                            gameTeam.getTeam().getEntries().forEach(team::addEntry);
+                        } else {
+                            finalScoreboardTeam.getEntries().forEach(finalScoreboardTeam::removeEntry);
+                            gameTeam.getTeam().getEntries().forEach(finalScoreboardTeam::addEntry);
+                        }
+                    });
+            if (scoreboard.getObjective(p.getUniqueId().toString().substring(0, 16)) == null) {
+                scoreboard.registerNewObjective(p.getUniqueId().toString().substring(0, 16), "dummy");
+                scoreboard.getObjective(p.getUniqueId().toString().substring(0, 16)).setDisplaySlot(DisplaySlot.SIDEBAR);
             }
-            Objective objective = p.getScoreboard().getObjective(DisplaySlot.SIDEBAR);
+            Objective objective = scoreboard.getObjective(DisplaySlot.SIDEBAR);
             objective.setDisplayName(title);
             for (String string : elements.keySet()) {
                 if (objective.getScore(string).getScore() != elements.get(string)) {
                     objective.getScore(string).setScore(elements.get(string));
                 }
             }
-            Set<String> stringSet = p.getScoreboard().getEntries();
+            Set<String> stringSet = scoreboard.getEntries();
             for (String string : stringSet) {
                 if (!elements.keySet().contains(string)) {
-                    p.getScoreboard().resetScores(string);
+                    scoreboard.resetScores(string);
                 }
             }
             return true;

@@ -15,7 +15,7 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class AbstractShop {
+public class PlayerShop {
     private EntityType entityType;
     private String displayName;
     private Map<Integer, ShopCategory> categoryItems;

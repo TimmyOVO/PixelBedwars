@@ -4,10 +4,12 @@ import com.github.skystardust.ultracore.bukkit.models.InventoryItem;
 import com.github.skystardust.ultracore.core.utils.FileUtils;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.game.GamePlayer;
+import com.github.timmyovo.pixelbedwars.game.GameTeam;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -95,10 +97,18 @@ public class ShopItem {
             if (takeItem(gamePlayer, requireItem)) {
                 items.forEach(inventoryItem1 -> {
                     ItemStack itemStack = inventoryItem1.toItemStack();
+                    if (itemStack.getType() == Material.WOOL) {
+                        GameTeam playerTeam = PixelBedwars.getPixelBedwars().getBedwarsGame().getPlayerTeam(gamePlayer);
+                        ItemStack wool = playerTeam.getTeamMeta().getWool();
+                        wool.setAmount(itemStack.getAmount());
+                        itemStack = wool;
+                    }
                     if (!applyArmor(gamePlayer.getPlayer(), itemStack)) {
                         gamePlayer.getPlayer().getInventory().addItem(itemStack);
                     }
                 });
+                GameTeam playerTeam = gamePlayer.getPlayerTeam();
+                playerTeam.getTeamShoppingProperties().notifyTeamEquipmentChange(playerTeam);
             }
         } else {
             gamePlayer.getPlayer().sendMessage("没有足够的物品购买!");
@@ -106,12 +116,9 @@ public class ShopItem {
     }
 
     public boolean applyArmor(Player player, ItemStack itemStack) {
+        GameTeam.disableItemDrop(itemStack);
         PlayerInventory inventory = player.getInventory();
         if (itemStack.getType().name().contains("HELMET")) {
-            ItemStack helmet = inventory.getHelmet();
-            if (helmet != null) {
-
-            }
             inventory.setHelmet(itemStack);
             return true;
         }

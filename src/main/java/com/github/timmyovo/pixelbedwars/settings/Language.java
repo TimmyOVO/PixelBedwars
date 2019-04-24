@@ -49,4 +49,7 @@ public class Language {
     private String teamItemAvailable;
     private String requireMoreItemsToBuy;
     private String teamShopDisplayName;
+
+    private List<String> teamShopHologramTexts;
+    private List<String> playerShopHologramTexts;
 }

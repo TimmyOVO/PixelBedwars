@@ -13,7 +13,9 @@ import com.github.skystardust.ultracore.core.database.DatabaseManagerBase;
 import com.github.skystardust.ultracore.core.database.newgen.DatabaseManager;
 import com.github.skystardust.ultracore.core.exceptions.ConfigurationException;
 import com.github.skystardust.ultracore.core.exceptions.DatabaseInitException;
+import com.github.skystardust.ultracore.core.utils.FileUtils;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
+import com.github.timmyovo.pixelbedwars.entity.BedwarsEgg;
 import com.github.timmyovo.pixelbedwars.entity.BedwarsEnderDragon;
 import com.github.timmyovo.pixelbedwars.entity.CorpsesManager;
 import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
@@ -25,7 +27,7 @@ import com.github.timmyovo.pixelbedwars.settings.ScoreboardConfiguration;
 import com.github.timmyovo.pixelbedwars.settings.resource.ResourceSpawner;
 import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
-import com.github.timmyovo.pixelbedwars.shop.AbstractShop;
+import com.github.timmyovo.pixelbedwars.shop.PlayerShop;
 import com.github.timmyovo.pixelbedwars.shop.ShopGui;
 import com.github.timmyovo.pixelbedwars.shop.TeamShopGui;
 import com.github.timmyovo.pixelbedwars.shop.category.ShopCategory;
@@ -65,9 +67,9 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     private ConfigurationManager configurationManager;
     private GameSetting gameSetting;
     private Language language;
-    private AbstractShop playerShop;
+    private PlayerShop playerShop;
     private ShopGui playerShopGui;
-    private AbstractShop teamShop;
+    private PlayerShop teamShop;
     private TeamShopGui teamShopGui;
     private BedwarsGame bedwarsGame;
     private DatabaseManager databaseManagerBase;
@@ -99,6 +101,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     private void loadCustomEntity() {
         try {
             NMSUtils.registerEntity(BedwarsEnderDragon.class, "BedwarsEnderDragon", EntityType.ENDER_DRAGON.getTypeId());
+            NMSUtils.registerEntity(BedwarsEgg.class, "BedwarsEgg", EntityType.EGG.getTypeId());
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         }
@@ -198,7 +201,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
 
     private void initConfigurations() {
         World defaultWorld = Bukkit.getWorlds().get(0);
-        configurationManager.registerConfiguration("playerShop", () -> AbstractShop.builder()
+        configurationManager.registerConfiguration("playerShop", () -> PlayerShop.builder()
                 .entityType(EntityType.VILLAGER)
                 .displayName("商店")
                 .categoryItems(ImmutableMap.<Integer, ShopCategory>builder()
@@ -514,7 +517,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                     .build(),
                             StageEntry.builder()
                                     .stageName("绿宝石生成Ⅲ阶段")
-                                    .stageCounter(600)
+                                    .stageCounter(300)
                                     .flow(3)
                                     .stageCommand("pb strrs EMERALD 5")
                                     .build(),
@@ -529,6 +532,12 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                     .stageCounter(300)
                                     .flow(5)
                                     .stageCommand("pb dm")
+                                    .build(),
+                            StageEntry.builder()
+                                    .stageName("游戏结束")
+                                    .stageCounter(300)
+                                    .flow(6)
+                                    .stageCommand("pb stopGame")
                                     .build()
                     ))
                     .waitScoreboard(ScoreboardConfiguration.builder()
@@ -562,7 +571,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                     "&e",
                                     "击杀数:&a%pb_info#kills%",
                                     "最终击杀数:&a%pb_info#finalKills%",
-                                    "破坏床数:&a%pb_info#bedDestroy%",
+                                    "破坏床数:&a%pb_info#bedDestroyed%",
                                     "&a&c",
                                     "&ewww.example.com"
                                     )
@@ -580,6 +589,8 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
         })
                 .registerConfiguration("language", () -> Language.builder()
                         .teamShopDisplayName("队伍商店")
+                        .teamShopHologramTexts(Arrays.asList("§6队伍商店", "§b右键点击"))
+                        .playerShopHologramTexts(Arrays.asList("§6道具商店", "§b右键点击"))
                         .playerDestroyBedMessage("玩家 %player% 摧毁了 %team% 的床!")
                         .allBedHasBeenDestroyed("所有床已经被摧毁")
                         .gameStart("游戏开始")
@@ -629,7 +640,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     }
 
     public void registerCommands() {
-        AbstractShop.initShopCommands();
+        PlayerShop.initShopCommands();
         MainCommandSpec.newBuilder()
                 .addAlias("pb")
                 .addAlias("pixelbedwars")
@@ -656,9 +667,6 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         .addAlias("deathMatch")
                         .addAlias("dm")
                         .withCommandSpecExecutor((commandSender, strings) -> {
-                            if (!(commandSender instanceof Player)) {
-                                return true;
-                            }
                             getBedwarsGame().callDeathMatch();
                             return true;
                         })
@@ -667,9 +675,6 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         .addAlias("strrs")
                         .addAlias("setTeamResourceRefreshSpeed")
                         .withCommandSpecExecutor((commandSender, strings) -> {
-                            if (!(commandSender instanceof Player)) {
-                                return true;
-                            }
                             if (strings.length < 3) {
                                 if (strings.length == 2) {
                                     try {
@@ -677,7 +682,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                                 .stream()
                                                 .map(GameTeam::getTeamMeta)
                                                 .forEach(teamMeta -> {
-                                                    teamMeta.allSpawnerMultiplier(Integer.valueOf(strings[1]));
+                                                    teamMeta.setResourceSpawnerMultiplier(ResourceSpawner.SpawnerType.valueOf(strings[0]), Integer.valueOf(strings[1]));
                                                 });
                                     } catch (NumberFormatException m) {
                                         commandSender.sendMessage("请输入数字");
@@ -686,7 +691,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                     }
                                     return true;
                                 }
-                                commandSender.sendMessage("/pb setTeamResourceRefreshSpeed [队伍名称] [资源名称] [资源刷新乘数]");
+                                commandSender.sendMessage("/pb setTeamResourceRefreshSpeed [资源名称] [资源刷新乘数]");
                                 return true;
                             }
                             try {
@@ -711,89 +716,10 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             return true;
                         })
                         .build())
-                /*.childCommandSpec(SubCommandSpec.newBuilder()
-                        .addAlias("addRandomItem")
-                        .addAlias("ari")
-                        .childCommandSpec(SubCommandSpec.newBuilder()
-                                .addAlias("create")
-                                .withCommandSpecExecutor((commandSender, strings) -> {
-                                    if (!(commandSender instanceof Player)) {
-                                        return true;
-                                    }
-                                    if (strings.length < 2) {
-                                        return true;
-                                    }
-                                    Player player = (Player) commandSender;
-                                    if (player.getItemInHand() == null) {
-                                        return true;
-                                    }
-                                    if (getGameSetting().getRandomInventoryItemListList().stream().anyMatch(randomInventoryItemList -> randomInventoryItemList.getName().equals(strings[0]))) {
-                                        commandSender.sendMessage("无法保存，已有相同名字的集合");
-                                        return true;
-                                    }
-                                    try {
-                                        getGameSetting().getRandomInventoryItemListList()
-                                                .add(RandomInventoryItemList.builder()
-                                                        .name(strings[0])
-                                                        .chance(Integer.valueOf(strings[1]))
-                                                        .randomInventoryItemList(Lists.newArrayList())
-                                                        .build());
-                                    } catch (NumberFormatException n) {
-                                        commandSender.sendMessage("错误，几率不是数字！");
-                                        return true;
-                                    }
-                                    save();
-                                    commandSender.sendMessage("成功！");
-                                    return true;
-                                })
-                                .build())
-                        .childCommandSpec(SubCommandSpec.newBuilder()
-                                .addAlias("add")
-                                .withCommandSpecExecutor((commandSender, strings) -> {
-                                    if (!(commandSender instanceof Player)) {
-                                        return true;
-                                    }
-                                    if (strings.length < 1) {
-                                        return true;
-                                    }
-                                    Player player = (Player) commandSender;
-                                    if (player.getItemInHand() == null) {
-                                        return true;
-                                    }
-                                    List<RandomInventoryItemList> collect = getGameSetting().getRandomInventoryItemListList()
-                                            .stream()
-                                            .filter(randomInventoryItemList -> randomInventoryItemList.getName().equals(strings[0]))
-                                            .collect(Collectors.toList());
-                                    if (collect.isEmpty()) {
-                                        commandSender.sendMessage("未找到指定随机物品组！");
-                                        return true;
-                                    }
-                                    getGameSetting().getRandomInventoryItemListList()
-                                            .stream()
-                                            .filter(randomInventoryItemList -> randomInventoryItemList.getName().equals(strings[0]))
-                                            .forEach(randomInventoryItemList -> randomInventoryItemList.add(RandomInventoryItem.builder()
-                                                    .items(InventoryItem.builder()
-                                                            .itemstackData(player.getItemInHand().serialize())
-                                                            .build())
-                                                    .build()));
-                                    save();
-                                    commandSender.sendMessage("成功！");
-                                    return true;
-                                })
-                                .build())
-                        .withCommandSpecExecutor((commandSender, strings) -> {
-                            commandSender.sendMessage("/gb addRandomItem/ari create [组名字] [几率] - 创建一个随机物品集合");
-                            commandSender.sendMessage("/gb addRandomItem/ari add [组名字] - 添加手上物品到指定随机物品集合");
-                            return true;
-                        })
-                        .build())*/
                 .childCommandSpec(SubCommandSpec.newBuilder()
                         .addAlias("destroyAllBed")
                         .addAlias("dab")
                         .withCommandSpecExecutor((commandSender, strings) -> {
-                            if (!(commandSender instanceof Player)) {
-                                return true;
-                            }
                             getBedwarsGame().destroyAllBed();
                             commandSender.sendMessage("成功!");
                             return true;
@@ -841,9 +767,6 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         .addAlias("addTeam")
                         .addAlias("at")
                         .withCommandSpecExecutor((commandSender, strings) -> {
-                            if (!(commandSender instanceof Player)) {
-                                return true;
-                            }
                             if (strings.length < 5) {
                                 commandSender.sendMessage("/pb addTeam [队伍名字] [队伍颜色] [最小人数] [最大人数] [队伍颜色]");
                                 return true;
@@ -941,6 +864,81 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             } catch (NullPointerException e) {
                                 e.printStackTrace();
                             }
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("si")
+                        .addAlias("saveitem")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            try {
+                                Player player = (Player) commandSender;
+                                ItemStack itemInHand = player.getInventory().getItemInHand();
+                                if (itemInHand != null) {
+                                    String s = FileUtils.GSON.toJson(InventoryItem.builder()
+                                            .itemstackData(itemInHand.serialize())
+                                            .build());
+                                    System.out.println(s);
+                                    player.sendMessage(s);
+                                }
+                            } catch (NullPointerException e) {
+                                e.printStackTrace();
+                            }
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("aps")
+                        .addAlias("addPlayerShop")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            try {
+                                Player player = (Player) commandSender;
+                                getGameSetting().getPlayerShopEntityList()
+                                        .add(VecLoc3D.valueOf(player.getLocation()));
+                                save();
+                                player.sendMessage("成功");
+                            } catch (NullPointerException e) {
+                                e.printStackTrace();
+                            }
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("ats")
+                        .addAlias("addTeamShop")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            try {
+                                Player player = (Player) commandSender;
+                                getGameSetting().getTeamShopEntityList()
+                                        .add(VecLoc3D.valueOf(player.getLocation()));
+                                save();
+                                player.sendMessage("成功");
+                            } catch (NullPointerException e) {
+                                e.printStackTrace();
+                            }
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("stopGame")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            getBedwarsGame().endGame();
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("shopInit")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            getBedwarsGame().doShopInit();
                             return true;
                         })
                         .build())

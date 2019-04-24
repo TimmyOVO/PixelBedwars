@@ -6,6 +6,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.bukkit.DyeColor;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 
@@ -28,6 +31,12 @@ public class TeamMeta {
 
     public String getFormatTeamName() {
         return getTeamColor() + getTeamName();
+    }
+
+    public ItemStack getWool() {
+        ItemStack itemStack = new ItemStack(Material.WOOL);
+        itemStack.setDurability(DyeColor.valueOf(woolColor).getData());
+        return itemStack;
     }
 
     public void tickSpawner() {
