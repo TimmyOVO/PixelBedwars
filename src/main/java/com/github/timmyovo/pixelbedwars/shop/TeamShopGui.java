@@ -1,11 +1,7 @@
 package com.github.timmyovo.pixelbedwars.shop;
 
-import com.github.skystardust.ultracore.bukkit.models.InventoryItem;
-import com.github.skystardust.ultracore.bukkit.modules.item.ItemFactory;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
-import com.github.timmyovo.pixelbedwars.shop.category.ShopCategory;
-import com.github.timmyovo.pixelbedwars.shop.item.ShopItem;
 import com.github.timmyovo.pixelbedwars.shop.item.ShopTeamItem;
 import net.minecraft.server.v1_8_R3.NBTTagCompound;
 import org.bukkit.Bukkit;
@@ -20,12 +16,13 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.List;
+import java.util.Map;
 
 public class TeamShopGui implements Listener {
-    public static final String SHOP_ITEM_KEY = "SHOP_ITEM";
-    public static final String CATEGORY_KEY = "CATEGORY";
-    private List<ShopTeamItem> shopTeamItems;
+
+    public static final String TEAM_SHOP_ITEM_KEY = "TEAM_SHOP_ITEM_KEY";
+
+    private Map<Integer, ShopTeamItem> shopTeamItems;
     private BedwarsGame bedwarsGame;
     private Inventory inventory;
 
@@ -38,21 +35,15 @@ public class TeamShopGui implements Listener {
     }
 
     private void applyItems(Player player) {
-        ItemFactory itemFactory = new ItemFactory(() -> new ItemStack(Material.IRON_SWORD))
-                .setDisplayName("§c锋利附魔")
-                .addLore("§7你放所有人员的剑和斧将永久获得锋利Ⅰ附魔!")
-                .addLore("  ")
-                .addLore("§7花费:§b8钻石")
-                .addLore("  ");
-        if (ShopItem.hasEnoughItems(player, InventoryItem.builder()
-                .itemstackData(new ItemStack(Material.DIAMOND, 8).serialize())
-                .build())) {
-            itemFactory.addLore("§a点击购买");
-        } else {
-            itemFactory.addLore("§c你没有足够的钻石");
-        }
-        this.inventory.setItem(10, itemFactory
-                .pack());
+        shopTeamItems.forEach((i, s) -> {
+            ItemStack itemStack = s.getIcon().toItemStack();
+            net.minecraft.server.v1_8_R3.ItemStack asNMSCopy = CraftItemStack.asNMSCopy(itemStack);
+            if (asNMSCopy.getTag() == null) {
+                asNMSCopy.setTag(new NBTTagCompound());
+            }
+            asNMSCopy.getTag().setString(TEAM_SHOP_ITEM_KEY, s.toString());
+            inventory.setItem(i, itemStack);
+        });
     }
 
     public void show(Player gamePlayer) {
@@ -71,15 +62,9 @@ public class TeamShopGui implements Listener {
         if (tag == null) {
             return;
         }
-        if (tag.hasKey(CATEGORY_KEY)) {
-            ShopCategory shopCategory = ShopCategory.fromString(tag.getString(CATEGORY_KEY));
-            shopCategory.applyToInventory(inventory);
-            return;
-        }
-        if (tag.hasKey(SHOP_ITEM_KEY)) {
-            String string = tag.getString(SHOP_ITEM_KEY);
-            ShopItem shopItem = ShopItem.fromString(string);
-            shopItem.requestBuyItem(player);
+        if (tag.hasKey(TEAM_SHOP_ITEM_KEY)) {
+            ShopTeamItem shopTeamItem = ShopTeamItem.fromString(tag.getString(TEAM_SHOP_ITEM_KEY));
+            shopTeamItem.requestBuyItem(((Player) inventoryClickEvent.getWhoClicked()));
         }
     }
 
@@ -95,7 +80,7 @@ public class TeamShopGui implements Listener {
             }
             return;
         }
-        if (clickedInventory.getName().equals(shop.getDisplayName())) {
+        if (clickedInventory.getName().equals(PixelBedwars.getPixelBedwars().getLanguage().getTeamShopDisplayName())) {
             inventoryClickEvent.setCancelled(true);
             notifyClick(inventoryClickEvent);
         }
@@ -104,9 +89,15 @@ public class TeamShopGui implements Listener {
     @EventHandler
     public void onPlayerInteract(PlayerInteractEntityEvent playerInteractEntityEvent) {
         Entity rightClicked = playerInteractEntityEvent.getRightClicked();
-        if (rightClicked.getType() == shop.getEntityType()) {
-            playerInteractEntityEvent.setCancelled(true);
+        if (rightClicked == null) {
+            return;
+        }
+        if (rightClicked.getType() == bedwarsGame.getGameSetting().getTeamGuiEntityType()) {
             show(playerInteractEntityEvent.getPlayer());
         }
+    }
+
+    public static enum TeamItemType {
+        SHARPNESS_ENCHANTMENT, TEAM_PROECTION_ENCHANTMENT,
     }
 }

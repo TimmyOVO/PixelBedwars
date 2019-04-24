@@ -5,6 +5,9 @@ import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
 import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
 import com.github.timmyovo.pixelbedwars.game.GameTeam;
 import com.github.timmyovo.pixelbedwars.settings.Language;
+import com.github.timmyovo.pixelbedwars.shop.TeamShoppingProperties;
+import com.github.timmyovo.pixelbedwars.shop.item.ShopItem;
+import com.github.timmyovo.pixelbedwars.shop.item.ShopTeamItem;
 import me.clip.placeholderapi.external.EZPlaceholderHook;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -101,6 +104,28 @@ public class PlaceholderHook extends EZPlaceholderHook {
                     return value.toString();
                 } catch (NoSuchFieldException | IllegalAccessException e) {
                     return "#ERROR_GETTING_FIELD";
+                }
+            }
+            if (s.startsWith("teamshop")) {
+                if (s.contains("#")) {
+                    String[] split = s.split("#");
+                    try {
+                        ShopTeamItem shopTeamItem = ShopTeamItem.fromString(split[1]);
+                        GameTeam playerTeam = bedwarsGame.getPlayerTeam(player);
+                        if (playerTeam == null) {
+                            return "未选择";
+                        }
+                        if (TeamShoppingProperties.hasTeamBuyItem(playerTeam, shopTeamItem)) {
+                            return language.getHasBuyThatTeamItem();
+                        }
+                        if (ShopItem.hasEnoughItems(player, shopTeamItem.getRequireItem())) {
+                            return language.getTeamItemAvailable();
+                        }
+                        return language.getRequireMoreItemsToBuy();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return "#ERROR";
+                    }
                 }
             }
             //todo 写完阶段刷新

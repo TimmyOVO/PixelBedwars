@@ -29,6 +29,7 @@ import com.github.timmyovo.pixelbedwars.shop.AbstractShop;
 import com.github.timmyovo.pixelbedwars.shop.ShopGui;
 import com.github.timmyovo.pixelbedwars.shop.category.ShopCategory;
 import com.github.timmyovo.pixelbedwars.shop.item.ShopItem;
+import com.github.timmyovo.pixelbedwars.shop.item.ShopTeamItem;
 import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -461,6 +462,9 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
         configurationManager.registerConfiguration("gameSetting", () -> {
             VecLoc3D defaultLocation = VecLoc3D.valueOf(defaultWorld.getSpawnLocation());
             return GameSetting.builder()
+                    .teamGuiEntityType(EntityType.ZOMBIE)
+                    .playerShopEntityList(Lists.newArrayList())
+                    .teamShopEntityList(Lists.newArrayList())
                     .playerWaitLocation(defaultLocation)
                     .minPlayer(2)
                     .maxPlayer(10)
@@ -570,6 +574,24 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                     .motdWait("等待中")
                     .motdGaming("游戏中")
                     .motdEnd("游戏结束")
+
+                    .teamShopItems(Arrays.asList(ShopTeamItem.newBuilder()
+                            .setIcon(InventoryItem.builder()
+                                    .itemstackData(new ItemFactory(() -> new ItemStack(Material.WOOL))
+                                            .setDisplayName("§c锋利附魔")
+                                            .addLore("点击为你放所有队员的斧和剑升级锋利1!")
+                                            .addLore(" ")
+                                            .addLore("%teamshop#%")
+                                            .pack().serialize())
+                                    .build())
+                            .setRequireItem(InventoryItem.builder()
+                                    .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                    .build())
+                            .setItems(Collections.singletonList(InventoryItem.builder()
+                                    .itemstackData(new ItemStack(Material.WOOL).serialize())
+                                    .build()))
+                            .setCommand("pb buy ")
+                            .build()))
                     .build();
         })
                 .registerConfiguration("language", () -> Language.builder()

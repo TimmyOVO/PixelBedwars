@@ -3,10 +3,12 @@ package com.github.timmyovo.pixelbedwars.settings;
 import com.github.skystardust.ultracore.bukkit.models.VecLoc3D;
 import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
+import com.github.timmyovo.pixelbedwars.shop.item.ShopTeamItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.bukkit.entity.EntityType;
 
 import java.util.List;
 
@@ -53,6 +55,11 @@ public class GameSetting {
     private String quitItemType;
     private int quitItemSlot;
     private int serverRestartDelay;
+
+    private EntityType teamGuiEntityType;
+    private List<VecLoc3D> playerShopEntityList;
+    private List<VecLoc3D> teamShopEntityList;
+    private List<ShopTeamItem> teamShopItems;
 
     private boolean disableWeather;
     private boolean disableTimeCycle;

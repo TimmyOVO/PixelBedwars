@@ -45,5 +45,8 @@ public class Language {
     private String gamingActionbar;
     private String endActionbar;
 
-
+    private String hasBuyThatTeamItem;
+    private String teamItemAvailable;
+    private String requireMoreItemsToBuy;
+    private String teamShopDisplayName;
 }
