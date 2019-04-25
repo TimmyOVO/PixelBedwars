@@ -94,7 +94,7 @@ public class TeamShoppingProperties {
         });
     }
 
-    public boolean isSword(ItemStack itemStack) {
+    public static boolean isSword(ItemStack itemStack) {
         return itemStack.getType().name().contains("SWORD") || itemStack.getType().name().contains("AXE");
     }
 }

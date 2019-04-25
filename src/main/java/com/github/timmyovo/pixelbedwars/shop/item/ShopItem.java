@@ -5,6 +5,7 @@ import com.github.skystardust.ultracore.core.utils.FileUtils;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.game.GamePlayer;
 import com.github.timmyovo.pixelbedwars.game.GameTeam;
+import com.github.timmyovo.pixelbedwars.shop.TeamShoppingProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,6 +14,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.List;
 
@@ -103,6 +105,11 @@ public class ShopItem {
                         wool.setAmount(itemStack.getAmount());
                         itemStack = wool;
                     }
+                    if (TeamShoppingProperties.isSword(itemStack)) {
+                        ItemMeta itemMeta = itemStack.getItemMeta();
+                        itemMeta.spigot().setUnbreakable(true);
+                        itemStack.setItemMeta(itemMeta);
+                    }
                     if (!applyArmor(gamePlayer.getPlayer(), itemStack)) {
                         gamePlayer.getPlayer().getInventory().addItem(itemStack);
                     }
@@ -119,18 +126,30 @@ public class ShopItem {
         GameTeam.disableItemDrop(itemStack);
         PlayerInventory inventory = player.getInventory();
         if (itemStack.getType().name().contains("HELMET")) {
+            ItemMeta itemMeta = itemStack.getItemMeta();
+            itemMeta.spigot().setUnbreakable(true);
+            itemStack.setItemMeta(itemMeta);
             inventory.setHelmet(itemStack);
             return true;
         }
         if (itemStack.getType().name().contains("CHESTPLATE")) {
+            ItemMeta itemMeta = itemStack.getItemMeta();
+            itemMeta.spigot().setUnbreakable(true);
+            itemStack.setItemMeta(itemMeta);
             inventory.setChestplate(itemStack);
             return true;
         }
         if (itemStack.getType().name().contains("LEGGINGS")) {
+            ItemMeta itemMeta = itemStack.getItemMeta();
+            itemMeta.spigot().setUnbreakable(true);
+            itemStack.setItemMeta(itemMeta);
             inventory.setLeggings(itemStack);
             return true;
         }
         if (itemStack.getType().name().contains("BOOTS")) {
+            ItemMeta itemMeta = itemStack.getItemMeta();
+            itemMeta.spigot().setUnbreakable(true);
+            itemStack.setItemMeta(itemMeta);
             inventory.setBoots(itemStack);
             return true;
         }

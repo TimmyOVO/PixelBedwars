@@ -34,9 +34,7 @@ import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Fireball;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -51,6 +49,7 @@ import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -470,6 +469,11 @@ public class BedwarsGame implements Listener {
             player.setMaxHealth(gameSetting.getPlayerMaxHealth());
             player.setHealth(player.getMaxHealth());
             InventoryFactory.unlockAllPlayerInventory(player);
+            ItemStack itemStack = new ItemStack(Material.WOOD_SWORD);
+            ItemMeta itemMeta = itemStack.getItemMeta();
+            itemMeta.spigot().setUnbreakable(true);
+            itemStack.setItemMeta(itemMeta);
+            player.getInventory().addItem(itemStack);
         });
         broadcastMessage(language.getGameStart(), null);
         doShopInit();
@@ -596,6 +600,11 @@ public class BedwarsGame implements Listener {
         if (((CraftEntity) entityExplodeEvent.getEntity()).getHandle() instanceof BedwarsEnderDragon) {
             return;
         }
+        if (entityExplodeEvent.getEntity() instanceof TNTPrimed) {
+            entityExplodeEvent.setCancelled(true);
+            Location location = entityExplodeEvent.getLocation();
+            location.getWorld().createExplosion(location, 10);
+        }
         processExplode(entityExplodeEvent.blockList());
     }
 
@@ -605,14 +614,15 @@ public class BedwarsGame implements Listener {
     }
 
     private void processExplode(List<Block> blocks) {
-        blocks
-                .removeIf(block -> {
-                    return getTeamList().stream()
-                            .map(GameTeam::getTeamMeta)
-                            .map(TeamMeta::getTeamGameLocation)
-                            .map(VecLoc3D::toBukkitLocation)
-                            .anyMatch(location -> !isBlockPlacedByHuman(location.getBlock()) || block.getType() == Material.STAINED_GLASS);
-                });
+        for (Block block : new ArrayList<>(blocks)) {
+            if (block.getType() == Material.STAINED_GLASS) {
+                blocks.remove(block);
+                continue;
+            }
+            if (!isBlockPlacedByHuman(block)) {
+                blocks.remove(block);
+            }
+        }
     }
 
     @EventHandler
@@ -627,9 +637,17 @@ public class BedwarsGame implements Listener {
             blockPlaceEvent.setCancelled(true);
             return;
         }
+
         markBlockBreakable(blockPlaceEvent.getBlock());
         if (hasPlayer(player) && gameState != GameState.GAMING) {
             blockPlaceEvent.setCancelled(true);
+            return;
+        }
+        if (blockPlaced.getType() == Material.TNT) {
+            Location location = blockPlaced.getLocation();
+            TNTPrimed tntPrimed = (TNTPrimed) location.getWorld().spawnEntity(location, EntityType.PRIMED_TNT);
+            tntPrimed.setFuseTicks(gameSetting.getTntExplodeDelay());
+            location.getBlock().setType(Material.AIR);
         }
     }
 
@@ -658,9 +676,7 @@ public class BedwarsGame implements Listener {
 
     @EventHandler
     public void onPlayerDamage(EntityDamageEvent entityDamageEvent) {
-        System.out.println(entityDamageEvent.getEntity());
         if (isInvulnerability(entityDamageEvent.getEntity())) {
-            System.out.println(111);
             entityDamageEvent.setCancelled(true);
             return;
         }
@@ -678,6 +694,9 @@ public class BedwarsGame implements Listener {
                     player.setHealth(0);
                 }
             }
+        }
+        if (entityDamageEvent.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION || entityDamageEvent.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
+            entityDamageEvent.setDamage(1);
         }
         if (entityDamageEvent instanceof EntityDamageByEntityEvent) {
             EntityDamageByEntityEvent entityDamageByEntityEvent = (EntityDamageByEntityEvent) entityDamageEvent;
@@ -1037,7 +1056,7 @@ public class BedwarsGame implements Listener {
                 .map(VecLoc3D::toBukkitLocation)
                 .map(Location::getBlock)
                 .filter(Objects::nonNull)
-                .forEach(Block::breakNaturally);
+                .forEach(block -> block.setType(Material.AIR, true));
     }
 
     public void callDeathMatch() {
@@ -1089,10 +1108,18 @@ public class BedwarsGame implements Listener {
         if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_AIR || playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK) {
             ItemStack hand = player.getItemInHand();
             if (hand.getType() == Material.FIREBALL) {
-                playerInteractEvent.setCancelled(true);
-                player.launchProjectile(Fireball.class, player.getEyeLocation().getDirection());
-                hand.setAmount(hand.getAmount() - 1);
-                player.setItemInHand(hand);
+                float fireballCooldown = getFireballCooldown(player);
+                System.out.println(fireballCooldown);
+                if (fireballCooldown <= 0) {
+                    playerInteractEvent.setCancelled(true);
+                    player.launchProjectile(Fireball.class, player.getEyeLocation().getDirection());
+                    hand.setAmount(hand.getAmount() - 1);
+                    player.setItemInHand(hand);
+                    setFireballCooldown(player, gameSetting.getFireballCooldown());
+                } else {
+                    player.sendMessage(formatMessage(getLanguage().getFireballCoolingDownMessage(), ImmutableMap.of("%s", String.valueOf(fireballCooldown))));
+                }
+
             }
             if (hand.getType() == Material.EGG) {
                 playerInteractEvent.setCancelled(true);
@@ -1100,6 +1127,7 @@ public class BedwarsGame implements Listener {
                 hand.setAmount(hand.getAmount() - 1);
                 player.setItemInHand(hand);
             }
+
             if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK && hand.getType() == Material.MONSTER_EGG && hand.getDurability() == 68) {
                 playerInteractEvent.setCancelled(true);
                 new BedwarsGolem(((CraftWorld) player.getWorld()).getHandle(), getPlayerTeam(player)).spawnEntity(playerInteractEvent.getClickedBlock().getLocation().add(0, 1, 0));
@@ -1107,6 +1135,31 @@ public class BedwarsGame implements Listener {
                 player.setItemInHand(hand);
             }
         }
+    }
+
+    @EventHandler
+    public void onProjectileHit(ProjectileHitEvent projectileHitEvent) {
+        if (projectileHitEvent.getEntity().getType() == EntityType.FIREBALL) {
+            Location location = projectileHitEvent.getEntity().getLocation();
+            projectileHitEvent.getEntity().remove();
+            location.getWorld().createExplosion(location, 10);
+        }
+    }
+
+    private void setFireballCooldown(Player player, float cd) {
+        Calendar instance = Calendar.getInstance();
+        instance.add(Calendar.MILLISECOND, (int) (cd * 1000));
+        player.removeMetadata("FIREBALL", PixelBedwars.getPixelBedwars());
+        player.setMetadata("FIREBALL", new FixedMetadataValue(PixelBedwars.getPixelBedwars(), instance.getTime()));
+    }
+
+    private float getFireballCooldown(Player player) {
+        if (player.hasMetadata("FIREBALL")) {
+            Date fireball = (Date) player.getMetadata("FIREBALL").get(0).value();
+            Date now = new Date();
+            return (float) (fireball.getTime() - now.getTime()) / 1000;
+        }
+        return 0;
     }
 
     private boolean getLookingAt(Player player, Player player1) {

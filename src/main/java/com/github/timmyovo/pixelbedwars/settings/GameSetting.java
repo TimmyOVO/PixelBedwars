@@ -62,4 +62,6 @@ public class GameSetting {
     private boolean disableWeather;
     private boolean disableTimeCycle;
     private String counterSound;
+    private float fireballCooldown;
+    private int tntExplodeDelay;
 }

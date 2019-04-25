@@ -56,4 +56,5 @@ public class Language {
     private List<String> playerShopHologramTexts;
 
     private Map<Integer, TitleEntry> respawnTitles;
+    private String fireballCoolingDownMessage;
 }

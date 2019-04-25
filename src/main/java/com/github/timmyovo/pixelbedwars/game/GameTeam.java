@@ -14,6 +14,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 
@@ -33,8 +34,10 @@ public class GameTeam {
     private TeamShoppingProperties teamShoppingProperties;
 
     public static void disableItemDrop(ItemStack itemStack) {
-        itemStack.setItemMeta(new ItemFactory(() -> itemStack)
-                .addLore("无法掉落").getItemMeta());
+        ItemMeta itemMeta = new ItemFactory(() -> itemStack)
+                .addLore("无法掉落").getItemMeta();
+        itemMeta.spigot().setUnbreakable(true);
+        itemStack.setItemMeta(itemMeta);
     }
 
     public void addPlayer(Player player) {

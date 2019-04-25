@@ -50,6 +50,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -470,6 +471,8 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
         configurationManager.registerConfiguration("gameSetting", () -> {
             VecLoc3D defaultLocation = VecLoc3D.valueOf(defaultWorld.getSpawnLocation());
             return GameSetting.builder()
+                    .fireballCooldown(0.5F)
+                    .tntExplodeDelay(100)
                     .teamGuiEntityType(EntityType.ZOMBIE)
                     .playerShopEntityList(Lists.newArrayList())
                     .teamShopEntityList(Lists.newArrayList())
@@ -614,6 +617,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                         .build())
                                 .build())
                         .teamShopDisplayName("队伍商店")
+                        .fireballCoolingDownMessage("你还需要等待 %s 秒才能使用这个物品")
                         .teamShopHologramTexts(Arrays.asList("§6队伍商店", "§b右键点击"))
                         .playerShopHologramTexts(Arrays.asList("§6道具商店", "§b右键点击"))
                         .playerDestroyBedMessage("玩家 %player% 摧毁了 %team% 的床!")
@@ -902,7 +906,10 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                 Player player = (Player) commandSender;
                                 ItemStack itemInHand = player.getInventory().getItemInHand();
                                 if (itemInHand != null) {
-                                    itemInHand.getItemMeta().spigot().setUnbreakable(true);
+                                    ItemMeta itemMeta = itemInHand.getItemMeta();
+                                    itemMeta.spigot().setUnbreakable(true);
+                                    itemInHand.setItemMeta(itemMeta);
+                                    player.setItemInHand(itemInHand);
                                 }
                             } catch (NullPointerException e) {
                                 e.printStackTrace();

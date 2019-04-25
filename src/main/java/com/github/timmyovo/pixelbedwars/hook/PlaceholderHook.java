@@ -76,13 +76,14 @@ public class PlaceholderHook extends EZPlaceholderHook {
                     if (bedwarsGame.isTeamDead(teamByName)) {
                         result.append(ChatColor.RED);
                         result.append("✘");
-                    }
-                    if (teamByName.isBedDestroyed()) {
-                        result.append(ChatColor.GREEN);
-                        result.append(String.valueOf(teamByName.getAlivePlayers().size()));
                     } else {
-                        result.append(ChatColor.GREEN);
-                        result.append("✔");
+                        if (teamByName.isBedDestroyed()) {
+                            result.append(ChatColor.GREEN);
+                            result.append(String.valueOf(teamByName.getAlivePlayers().size()));
+                        } else {
+                            result.append(ChatColor.GREEN);
+                            result.append("✔");
+                        }
                     }
                     if (bedwarsGame.getPlayerTeam(player).equals(teamByName)) {
                         result.append(ChatColor.GRAY);
