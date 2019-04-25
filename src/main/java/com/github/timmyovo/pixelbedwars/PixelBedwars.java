@@ -471,6 +471,8 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
         configurationManager.registerConfiguration("gameSetting", () -> {
             VecLoc3D defaultLocation = VecLoc3D.valueOf(defaultWorld.getSpawnLocation());
             return GameSetting.builder()
+                    .fireballExplodePower(10)
+                    .tntExplodePower(10)
                     .fireballCooldown(0.5F)
                     .tntExplodeDelay(100)
                     .teamGuiEntityType(EntityType.ZOMBIE)

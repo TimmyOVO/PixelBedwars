@@ -64,4 +64,6 @@ public class GameSetting {
     private String counterSound;
     private float fireballCooldown;
     private int tntExplodeDelay;
+    private int tntExplodePower;
+    private int fireballExplodePower;
 }

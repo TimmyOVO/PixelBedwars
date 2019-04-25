@@ -54,7 +54,7 @@ public class GameTeam {
         }
         bedwarsGame.sendMessage(gamePlayer, language.getJoinTeamMessage(), ImmutableMap.of("%team_name%", teamMeta.getFormatTeamName()));
         Objects.requireNonNull(team).addEntry(player.getName());
-        String name = teamMeta.getTeamColor() + "[" + teamMeta.getTeamName() + "]" + player.getName();
+        String name = teamMeta.getFormatTeamName() + " | " + teamMeta.getWoolColor().substring(0, 1) + player.getName();
         player.setDisplayName(name);
         player.setPlayerListName(name);
         applyPlayerTeamEquipment(player);

@@ -1,7 +1,6 @@
 package com.github.timmyovo.pixelbedwars.game;
 
 import com.github.skystardust.ultracore.bukkit.models.VecLoc3D;
-import com.github.skystardust.ultracore.bukkit.modules.inventory.InventoryFactory;
 import com.github.skystardust.ultracore.bukkit.modules.item.ItemFactory;
 import com.github.skystardust.ultracore.core.database.newgen.DatabaseManager;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
@@ -43,6 +42,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.server.ServerListPingEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
@@ -468,7 +468,6 @@ public class BedwarsGame implements Listener {
             clearPlayerInventory(player);
             player.setMaxHealth(gameSetting.getPlayerMaxHealth());
             player.setHealth(player.getMaxHealth());
-            InventoryFactory.unlockAllPlayerInventory(player);
             ItemStack itemStack = new ItemStack(Material.WOOD_SWORD);
             ItemMeta itemMeta = itemStack.getItemMeta();
             itemMeta.spigot().setUnbreakable(true);
@@ -538,9 +537,6 @@ public class BedwarsGame implements Listener {
         }
         PixelBedwars.getPixelBedwars().getCorpsesManager()
                 .registerPacketListener(player);
-        if (!player.isOp()) {
-            InventoryFactory.lockAllPlayerInventory(player);
-        }
         resetPlayer(player);
         gamePlayers.add(new GamePlayer(player));
         player.teleport(gameSetting.getPlayerWaitLocation().toBukkitLocation());
@@ -553,6 +549,14 @@ public class BedwarsGame implements Listener {
         }
         autoPlayerTeam().addPlayer(player);
         broadcastMessage(language.getPlayerJoinMessage(), ImmutableMap.of("%player%", player.getDisplayName()));
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerClickInventory(InventoryClickEvent inventoryClickEvent) {
+        Player whoClicked = (Player) inventoryClickEvent.getWhoClicked();
+        if (gameState != GameState.WAITING) {
+            inventoryClickEvent.setCancelled(true);
+        }
     }
 
     private boolean canPlayerRespawn(GamePlayer player) {
@@ -603,7 +607,7 @@ public class BedwarsGame implements Listener {
         if (entityExplodeEvent.getEntity() instanceof TNTPrimed) {
             entityExplodeEvent.setCancelled(true);
             Location location = entityExplodeEvent.getLocation();
-            location.getWorld().createExplosion(location, 10);
+            location.getWorld().createExplosion(location, getGameSetting().getTntExplodePower());
         }
         processExplode(entityExplodeEvent.blockList());
     }
@@ -615,14 +619,65 @@ public class BedwarsGame implements Listener {
 
     private void processExplode(List<Block> blocks) {
         for (Block block : new ArrayList<>(blocks)) {
-            if (block.getType() == Material.STAINED_GLASS) {
+            Location location = block.getLocation();
+            if (getEast(location).getType() == Material.STAINED_GLASS) {
                 blocks.remove(block);
-                continue;
+            }
+            if (getWest(location).getType() == Material.STAINED_GLASS) {
+                blocks.remove(block);
+            }
+            if (getNorth(location).getType() == Material.STAINED_GLASS) {
+                blocks.remove(block);
+            }
+            if (getSouth(location).getType() == Material.STAINED_GLASS) {
+                blocks.remove(block);
+            }
+            if (getUp(location).getType() == Material.STAINED_GLASS) {
+                blocks.remove(block);
+            }
+            if (getDown(location).getType() == Material.STAINED_GLASS) {
+                blocks.remove(block);
             }
             if (!isBlockPlacedByHuman(block)) {
                 blocks.remove(block);
             }
         }
+    }
+
+    private Block getEast(Location location) {
+        BlockPosition blockPosition = new BlockPosition(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        BlockPosition east = blockPosition.east();
+        return new Location(location.getWorld(), east.getX(), east.getY(), east.getZ()).getBlock();
+    }
+
+    private Block getWest(Location location) {
+        BlockPosition blockPosition = new BlockPosition(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        BlockPosition east = blockPosition.west();
+        return new Location(location.getWorld(), east.getX(), east.getY(), east.getZ()).getBlock();
+    }
+
+    private Block getNorth(Location location) {
+        BlockPosition blockPosition = new BlockPosition(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        BlockPosition east = blockPosition.north();
+        return new Location(location.getWorld(), east.getX(), east.getY(), east.getZ()).getBlock();
+    }
+
+    private Block getSouth(Location location) {
+        BlockPosition blockPosition = new BlockPosition(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        BlockPosition east = blockPosition.south();
+        return new Location(location.getWorld(), east.getX(), east.getY(), east.getZ()).getBlock();
+    }
+
+    private Block getUp(Location location) {
+        BlockPosition blockPosition = new BlockPosition(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        BlockPosition east = blockPosition.up();
+        return new Location(location.getWorld(), east.getX(), east.getY(), east.getZ()).getBlock();
+    }
+
+    private Block getDown(Location location) {
+        BlockPosition blockPosition = new BlockPosition(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        BlockPosition east = blockPosition.down();
+        return new Location(location.getWorld(), east.getX(), east.getY(), east.getZ()).getBlock();
     }
 
     @EventHandler
@@ -1142,7 +1197,7 @@ public class BedwarsGame implements Listener {
         if (projectileHitEvent.getEntity().getType() == EntityType.FIREBALL) {
             Location location = projectileHitEvent.getEntity().getLocation();
             projectileHitEvent.getEntity().remove();
-            location.getWorld().createExplosion(location, 10);
+            location.getWorld().createExplosion(location, getGameSetting().getFireballExplodePower());
         }
     }
 
