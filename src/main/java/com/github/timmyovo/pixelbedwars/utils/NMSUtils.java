@@ -106,8 +106,10 @@ public class NMSUtils {
 
     public static void sendPlayerTitle(Player player, String message, ImmutableMap<String, String> var) {
         message = PlaceholderAPI.setPlaceholders(player, message);
-        for (Map.Entry<String, String> stringStringEntry : var.entrySet()) {
-            message = message.replace(stringStringEntry.getKey(), stringStringEntry.getValue());
+        if (var != null) {
+            for (Map.Entry<String, String> stringStringEntry : var.entrySet()) {
+                message = message.replace(stringStringEntry.getKey(), stringStringEntry.getValue());
+            }
         }
         message = ChatColor.translateAlternateColorCodes('&', message);
         ((CraftPlayer) player).getHandle().playerConnection.sendPacket(new PacketPlayOutTitle(PacketPlayOutTitle.EnumTitleAction.TITLE, IChatBaseComponent.ChatSerializer.a("{\"text\":\"" + message + "\"}")));
@@ -115,8 +117,10 @@ public class NMSUtils {
 
     public static void sendPlayerSubtitle(Player player, String message, ImmutableMap<String, String> var) {
         message = PlaceholderAPI.setPlaceholders(player, message);
-        for (Map.Entry<String, String> stringStringEntry : var.entrySet()) {
-            message = message.replace(stringStringEntry.getKey(), stringStringEntry.getValue());
+        if (var != null) {
+            for (Map.Entry<String, String> stringStringEntry : var.entrySet()) {
+                message = message.replace(stringStringEntry.getKey(), stringStringEntry.getValue());
+            }
         }
         message = ChatColor.translateAlternateColorCodes('&', message);
         ((CraftPlayer) player).getHandle().playerConnection.sendPacket(new PacketPlayOutTitle(PacketPlayOutTitle.EnumTitleAction.SUBTITLE, IChatBaseComponent.ChatSerializer.a("{\"text\":\"" + message + "\"}")));

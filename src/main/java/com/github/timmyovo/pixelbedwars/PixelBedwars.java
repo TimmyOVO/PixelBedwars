@@ -17,6 +17,7 @@ import com.github.skystardust.ultracore.core.utils.FileUtils;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
 import com.github.timmyovo.pixelbedwars.entity.BedwarsEgg;
 import com.github.timmyovo.pixelbedwars.entity.BedwarsEnderDragon;
+import com.github.timmyovo.pixelbedwars.entity.BedwarsGolem;
 import com.github.timmyovo.pixelbedwars.entity.CorpsesManager;
 import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
 import com.github.timmyovo.pixelbedwars.game.GameTeam;
@@ -27,6 +28,7 @@ import com.github.timmyovo.pixelbedwars.settings.ScoreboardConfiguration;
 import com.github.timmyovo.pixelbedwars.settings.resource.ResourceSpawner;
 import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
+import com.github.timmyovo.pixelbedwars.settings.title.TitleEntry;
 import com.github.timmyovo.pixelbedwars.shop.PlayerShop;
 import com.github.timmyovo.pixelbedwars.shop.ShopGui;
 import com.github.timmyovo.pixelbedwars.shop.TeamShopGui;
@@ -102,6 +104,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
         try {
             NMSUtils.registerEntity(BedwarsEnderDragon.class, "BedwarsEnderDragon", EntityType.ENDER_DRAGON.getTypeId());
             NMSUtils.registerEntity(BedwarsEgg.class, "BedwarsEgg", EntityType.EGG.getTypeId());
+            NMSUtils.registerEntity(BedwarsGolem.class, "BedwarsGolem", EntityType.IRON_GOLEM.getTypeId());
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         }
@@ -588,6 +591,28 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                     .build();
         })
                 .registerConfiguration("language", () -> Language.builder()
+                        .respawnTitles(ImmutableMap.<Integer, TitleEntry>builder()
+                                .put(1, TitleEntry.builder()
+                                        .title("§c等待复活")
+                                        .subtitle("§b%s")
+                                        .build())
+                                .put(2, TitleEntry.builder()
+                                        .title("§c等待复活")
+                                        .subtitle("§b%s")
+                                        .build())
+                                .put(3, TitleEntry.builder()
+                                        .title("§c等待复活")
+                                        .subtitle("§b%s")
+                                        .build())
+                                .put(4, TitleEntry.builder()
+                                        .title("§c等待复活")
+                                        .subtitle("§b%s")
+                                        .build())
+                                .put(5, TitleEntry.builder()
+                                        .title("§c等待复活")
+                                        .subtitle("§b%s")
+                                        .build())
+                                .build())
                         .teamShopDisplayName("队伍商店")
                         .teamShopHologramTexts(Arrays.asList("§6队伍商店", "§b右键点击"))
                         .playerShopHologramTexts(Arrays.asList("§6道具商店", "§b右键点击"))
@@ -861,6 +886,24 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                 }
                                 save();
                                 commandSender.sendMessage("成功!");
+                            } catch (NullPointerException e) {
+                                e.printStackTrace();
+                            }
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("ub")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            try {
+                                Player player = (Player) commandSender;
+                                ItemStack itemInHand = player.getInventory().getItemInHand();
+                                if (itemInHand != null) {
+                                    itemInHand.getItemMeta().spigot().setUnbreakable(true);
+                                }
                             } catch (NullPointerException e) {
                                 e.printStackTrace();
                             }

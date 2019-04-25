@@ -1,11 +1,13 @@
 package com.github.timmyovo.pixelbedwars.settings;
 
+import com.github.timmyovo.pixelbedwars.settings.title.TitleEntry;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -52,4 +54,6 @@ public class Language {
 
     private List<String> teamShopHologramTexts;
     private List<String> playerShopHologramTexts;
+
+    private Map<Integer, TitleEntry> respawnTitles;
 }

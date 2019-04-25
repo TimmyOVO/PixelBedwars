@@ -63,7 +63,7 @@ public class PlaceholderHook extends EZPlaceholderHook {
             if (playerTeam == null) {
                 return "未选择";
             }
-            return playerTeam.getTeam().getDisplayName();
+            return playerTeam.getTeamMeta().getFormatTeamName();
         }
         if (s.startsWith("status")) {
             if (s.contains("#")) {

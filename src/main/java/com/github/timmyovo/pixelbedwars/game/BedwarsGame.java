@@ -6,10 +6,8 @@ import com.github.skystardust.ultracore.bukkit.modules.item.ItemFactory;
 import com.github.skystardust.ultracore.core.database.newgen.DatabaseManager;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
-import com.github.timmyovo.pixelbedwars.entity.BedwarsEgg;
-import com.github.timmyovo.pixelbedwars.entity.BedwarsEnderDragon;
-import com.github.timmyovo.pixelbedwars.entity.Corpses;
-import com.github.timmyovo.pixelbedwars.entity.CorpsesManager;
+import com.github.timmyovo.pixelbedwars.entity.*;
+import com.github.timmyovo.pixelbedwars.game.task.PlayerRespawnTask;
 import com.github.timmyovo.pixelbedwars.settings.GameSetting;
 import com.github.timmyovo.pixelbedwars.settings.Language;
 import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
@@ -35,9 +33,9 @@ import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_8_R3.util.CraftChatMessage;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -260,6 +258,7 @@ public class BedwarsGame implements Listener {
             Hologram hologram = HologramsAPI.createHologram(PixelBedwars.getPixelBedwars(), location1.add(0, 3, 0));
             getLanguage().getPlayerShopHologramTexts().forEach(hologram::appendTextLine);
             NMSUtils.clearEntityAI(entity);
+            setEntityInvulnerability(entity, true);
             net.minecraft.server.v1_8_R3.Entity handle = ((CraftEntity) entity).getHandle();
             if (handle instanceof EntityInsentient) {
                 NMSUtils.addAIToEntity(entity, new PathfinderGoalLookAtPlayer(((EntityInsentient) handle), EntityPlayer.class, 8));
@@ -273,6 +272,7 @@ public class BedwarsGame implements Listener {
             Hologram hologram = HologramsAPI.createHologram(PixelBedwars.getPixelBedwars(), location1.add(0, 3, 0));
             getLanguage().getTeamShopHologramTexts().forEach(hologram::appendTextLine);
             NMSUtils.clearEntityAI(entity);
+            setEntityInvulnerability(entity, true);
             net.minecraft.server.v1_8_R3.Entity handle = ((CraftEntity) entity).getHandle();
             if (handle instanceof EntityInsentient) {
                 NMSUtils.addAIToEntity(entity, new PathfinderGoalLookAtPlayer(((EntityInsentient) handle), EntityPlayer.class, 8));
@@ -294,7 +294,7 @@ public class BedwarsGame implements Listener {
         } catch (Exception e) {
             //ignored
         }
-        ((CraftPlayer) player).getHandle().playerConnection.sendPacket(new PacketPlayOutChat(CraftChatMessage.fromString(s)[0], (byte) 2));
+        ((CraftPlayer) player).getHandle().playerConnection.sendPacket(new PacketPlayOutChat(IChatBaseComponent.ChatSerializer.a("{\"text\":\"" + s + "\"}"), (byte) 2));
     }
 
     public void sendTitle(Player player, String string) {
@@ -465,7 +465,7 @@ public class BedwarsGame implements Listener {
             Location location = getPlayerTeam(player).getTeamMeta().getTeamGameLocation().toBukkitLocation();
             checkChunk(location);
             player.teleport(location);
-            setPlayerInvulnerability(player, false);
+            setEntityInvulnerability(player, false);
             clearPlayerInventory(player);
             player.setMaxHealth(gameSetting.getPlayerMaxHealth());
             player.setHealth(player.getMaxHealth());
@@ -492,7 +492,7 @@ public class BedwarsGame implements Listener {
         }
     }
 
-    public void setPlayerInvulnerability(Player player, boolean enable) {
+    public void setEntityInvulnerability(Entity player, boolean enable) {
         if (enable) {
             player.setMetadata("Invulnerability", new FixedMetadataValue(PixelBedwars.getPixelBedwars(), true));
         } else {
@@ -500,8 +500,8 @@ public class BedwarsGame implements Listener {
         }
     }
 
-    public boolean isInvulnerability(Player player) {
-        return player.hasMetadata("Invulnerability") && player.getMetadata("Invulnerability").get(0).asBoolean();
+    public boolean isInvulnerability(Entity player) {
+        return player.hasMetadata("Invulnerability");
     }
 
     public GamePlayer getBedwarsPlayer(Player player) {
@@ -540,7 +540,7 @@ public class BedwarsGame implements Listener {
         resetPlayer(player);
         gamePlayers.add(new GamePlayer(player));
         player.teleport(gameSetting.getPlayerWaitLocation().toBukkitLocation());
-        setPlayerInvulnerability(player, true);
+        setEntityInvulnerability(player, true);
 
         player.getInventory().setItem(gameSetting.getSelectTeamItemSlot(), new ItemFactory(() -> new ItemStack(Material.valueOf(gameSetting.getSelectTeamItemType()))).setDisplayName(language.getSlimeBallName()).setLore(language.getSlimeBallLore()).pack());
         player.getInventory().setItem(gameSetting.getQuitItemSlot(), new ItemFactory(() -> new ItemStack(Material.valueOf(gameSetting.getQuitItemType()))).setDisplayName(language.getQuitItemName()).setLore(language.getQuitItemLore()).pack());
@@ -560,8 +560,12 @@ public class BedwarsGame implements Listener {
     }
 
     private boolean isBlockBreakable(Player player, Block block) {
-        boolean human = block.hasMetadata("human") || block.getType() == Material.BED_BLOCK;
+        boolean human = isBlockPlacedByHuman(block) || block.getType() == Material.BED_BLOCK;
         return human && canBreakBed(player, block);
+    }
+
+    private boolean isBlockPlacedByHuman(Block block) {
+        return block.hasMetadata("human");
     }
 
     public GameTeam getGameTeamByBedLocation(Block block) {
@@ -589,25 +593,25 @@ public class BedwarsGame implements Listener {
 
     @EventHandler
     public void onEntityExplode(EntityExplodeEvent entityExplodeEvent) {
-        entityExplodeEvent.blockList()
-                .removeIf(block -> {
-                    return getTeamList().stream()
-                            .map(GameTeam::getTeamMeta)
-                            .map(TeamMeta::getTeamGameLocation)
-                            .map(VecLoc3D::toBukkitLocation)
-                            .anyMatch(location -> location.distance(block.getLocation()) <= 8) || block.getType() == Material.BED_BLOCK || block.getType() == Material.STAINED_GLASS;
-                });
+        if (((CraftEntity) entityExplodeEvent.getEntity()).getHandle() instanceof BedwarsEnderDragon) {
+            return;
+        }
+        processExplode(entityExplodeEvent.blockList());
     }
 
     @EventHandler
     public void onEntityExplode(BlockExplodeEvent blockExplodeEvent) {
-        blockExplodeEvent.blockList()
+        processExplode(blockExplodeEvent.blockList());
+    }
+
+    private void processExplode(List<Block> blocks) {
+        blocks
                 .removeIf(block -> {
                     return getTeamList().stream()
                             .map(GameTeam::getTeamMeta)
                             .map(TeamMeta::getTeamGameLocation)
                             .map(VecLoc3D::toBukkitLocation)
-                            .anyMatch(location -> location.distance(block.getLocation()) <= 8) || block.getType() == Material.BED_BLOCK || block.getType() == Material.STAINED_GLASS;
+                            .anyMatch(location -> !isBlockPlacedByHuman(location.getBlock()) || block.getType() == Material.STAINED_GLASS);
                 });
     }
 
@@ -654,13 +658,17 @@ public class BedwarsGame implements Listener {
 
     @EventHandler
     public void onPlayerDamage(EntityDamageEvent entityDamageEvent) {
+        System.out.println(entityDamageEvent.getEntity());
+        if (isInvulnerability(entityDamageEvent.getEntity())) {
+            System.out.println(111);
+            entityDamageEvent.setCancelled(true);
+            return;
+        }
         if (!(entityDamageEvent.getEntity() instanceof Player)) {
             return;
         }
         Player player = (Player) entityDamageEvent.getEntity();
-        if (isInvulnerability(player)) {
-            entityDamageEvent.setCancelled(true);
-        }
+
         if (entityDamageEvent.getCause() == EntityDamageEvent.DamageCause.VOID) {
             if (hasPlayer(player)) {
                 if (gameState == GameState.WAITING) {
@@ -762,7 +770,9 @@ public class BedwarsGame implements Listener {
             if (playerDeath(entity)) {
 
             }
-            entity.spigot().respawn();
+            Bukkit.getScheduler().runTaskLater(PixelBedwars.getPixelBedwars(), () -> {
+                entity.spigot().respawn();
+            }, 10L);
         }
     }
 
@@ -918,7 +928,7 @@ public class BedwarsGame implements Listener {
             if (!canGameContinue()) {
                 endGame();
             }
-            onPlayerSuccessRespawn(player);
+            new PlayerRespawnTask(gamePlayer).start();
         }
     }
 
@@ -1077,12 +1087,24 @@ public class BedwarsGame implements Listener {
     public void onPlayerTargetOthers(PlayerInteractEvent playerInteractEvent) {
         Player player = playerInteractEvent.getPlayer();
         if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_AIR || playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (player.getItemInHand().getType() == Material.EGG) {
+            ItemStack hand = player.getItemInHand();
+            if (hand.getType() == Material.FIREBALL) {
+                playerInteractEvent.setCancelled(true);
+                player.launchProjectile(Fireball.class, player.getEyeLocation().getDirection());
+                hand.setAmount(hand.getAmount() - 1);
+                player.setItemInHand(hand);
+            }
+            if (hand.getType() == Material.EGG) {
                 playerInteractEvent.setCancelled(true);
                 BedwarsEgg.shoot(player.getWorld(), player, getPlayerTeam(player).getTeamMeta());
-                ItemStack itemInHand = player.getItemInHand();
-                itemInHand.setAmount(itemInHand.getAmount() - 1);
-                player.setItemInHand(itemInHand);
+                hand.setAmount(hand.getAmount() - 1);
+                player.setItemInHand(hand);
+            }
+            if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK && hand.getType() == Material.MONSTER_EGG && hand.getDurability() == 68) {
+                playerInteractEvent.setCancelled(true);
+                new BedwarsGolem(((CraftWorld) player.getWorld()).getHandle(), getPlayerTeam(player)).spawnEntity(playerInteractEvent.getClickedBlock().getLocation().add(0, 1, 0));
+                hand.setAmount(hand.getAmount() - 1);
+                player.setItemInHand(hand);
             }
         }
     }

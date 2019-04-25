@@ -32,6 +32,10 @@ public class GameTeam {
     private Team team;
     private TeamShoppingProperties teamShoppingProperties;
 
+    public static void disableItemDrop(ItemStack itemStack) {
+        itemStack.setItemMeta(new ItemFactory(() -> itemStack)
+                .addLore("无法掉落").getItemMeta());
+    }
 
     public void addPlayer(Player player) {
         Validate.notNull(player);
@@ -45,17 +49,12 @@ public class GameTeam {
         if (gamePlayer == null) {
             return;
         }
-        bedwarsGame.sendMessage(gamePlayer, language.getJoinTeamMessage(), ImmutableMap.of("%team_name%", teamMeta.getTeamName()));
+        bedwarsGame.sendMessage(gamePlayer, language.getJoinTeamMessage(), ImmutableMap.of("%team_name%", teamMeta.getFormatTeamName()));
         Objects.requireNonNull(team).addEntry(player.getName());
         String name = teamMeta.getTeamColor() + "[" + teamMeta.getTeamName() + "]" + player.getName();
         player.setDisplayName(name);
         player.setPlayerListName(name);
         applyPlayerTeamEquipment(player);
-    }
-
-    public static void disableItemDrop(ItemStack itemStack) {
-        itemStack.setItemMeta(new ItemFactory(() -> itemStack)
-                .addLore("无法掉落").getItemMeta());
     }
 
     public void applyPlayerTeamEquipment(Player player) {

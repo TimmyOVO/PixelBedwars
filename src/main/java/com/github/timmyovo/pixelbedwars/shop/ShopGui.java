@@ -76,11 +76,15 @@ public class ShopGui implements Listener {
             return;
         }
         if (tag.hasKey(SHOP_ITEM_KEY)) {
+            if (inventoryClickEvent.isShiftClick()) {
+
+            }
             String string = tag.getString(SHOP_ITEM_KEY);
             ShopItem shopItem = ShopItem.fromString(string);
             shopItem.requestBuyItem(player);
         }
     }
+
 
     @EventHandler
     public void onPlayerClickInventory(InventoryClickEvent inventoryClickEvent) {
