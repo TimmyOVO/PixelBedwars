@@ -994,6 +994,152 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             return true;
                         })
                         .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("setShopItemIcon")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            if (strings.length < 2) {
+                                commandSender.sendMessage("/pb setShopItemIcon 分类ID 格子ID");
+                                return true;
+                            }
+                            Player player = (Player) commandSender;
+                            ShopCategory shopCategory = getPlayerShop().getCategoryItems().get(Integer.valueOf(strings[0]));
+                            if (shopCategory == null) {
+                                commandSender.sendMessage("未找到指定分类");
+                                return true;
+                            }
+
+                            ShopItem shopItem = shopCategory.getShopItemMap().get(Integer.valueOf(strings[1]));
+                            if (shopItem == null) {
+                                player.sendMessage("未找到对应商品");
+                                return true;
+                            }
+
+                            ItemStack itemInHand = player.getInventory().getItemInHand();
+                            if (itemInHand != null) {
+                                shopItem.setIcon(InventoryItem.builder()
+                                        .itemstackData(itemInHand.serialize())
+                                        .build());
+                                save();
+                                player.sendMessage("成功!");
+                            } else {
+                                player.sendMessage("请手持物品重试");
+                            }
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("setShopItemRequire")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            if (strings.length < 2) {
+                                commandSender.sendMessage("/pb setShopItemRequire 分类ID 格子ID");
+                                return true;
+                            }
+                            Player player = (Player) commandSender;
+                            ShopCategory shopCategory = getPlayerShop().getCategoryItems().get(Integer.valueOf(strings[0]));
+                            if (shopCategory == null) {
+                                commandSender.sendMessage("未找到指定分类");
+                                return true;
+                            }
+
+                            ShopItem shopItem = shopCategory.getShopItemMap().get(Integer.valueOf(strings[1]));
+                            if (shopItem == null) {
+                                player.sendMessage("未找到对应商品");
+                                return true;
+                            }
+
+                            ItemStack itemInHand = player.getInventory().getItemInHand();
+                            if (itemInHand != null) {
+                                shopItem.setRequireItem(InventoryItem.builder()
+                                        .itemstackData(itemInHand.serialize())
+                                        .build());
+                                save();
+                                player.sendMessage("成功!");
+                            } else {
+                                player.sendMessage("请手持物品重试");
+                            }
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("setShopItemIcon")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            if (strings.length < 2) {
+                                commandSender.sendMessage("/pb setShopItemIcon 分类ID 格子ID");
+                                return true;
+                            }
+                            Player player = (Player) commandSender;
+                            ShopCategory shopCategory = getPlayerShop().getCategoryItems().get(Integer.valueOf(strings[0]));
+                            if (shopCategory == null) {
+                                commandSender.sendMessage("未找到指定分类");
+                                return true;
+                            }
+
+                            ShopItem shopItem = shopCategory.getShopItemMap().get(Integer.valueOf(strings[1]));
+                            if (shopItem == null) {
+                                player.sendMessage("未找到对应商品");
+                                return true;
+                            }
+
+                            ItemStack itemInHand = player.getInventory().getItemInHand();
+                            if (itemInHand != null) {
+                                shopItem.setIcon(InventoryItem.builder()
+                                        .itemstackData(itemInHand.serialize())
+                                        .build());
+                                save();
+                                player.sendMessage("成功!");
+                            } else {
+                                player.sendMessage("请手持物品重试");
+                            }
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("setShopItem")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            if (strings.length < 2) {
+                                commandSender.sendMessage("/pb setShopItem 分类ID 格子ID");
+                                return true;
+                            }
+                            Player player = (Player) commandSender;
+                            ShopCategory shopCategory = getPlayerShop().getCategoryItems().get(Integer.valueOf(strings[0]));
+                            if (shopCategory == null) {
+                                commandSender.sendMessage("未找到指定分类");
+                                return true;
+                            }
+
+                            ShopItem shopItem = shopCategory.getShopItemMap().get(Integer.valueOf(strings[1]));
+                            if (shopItem == null) {
+                                player.sendMessage("未找到对应商品");
+                                return true;
+                            }
+
+                            ItemStack itemInHand = player.getInventory().getItemInHand();
+                            if (itemInHand != null) {
+                                List<InventoryItem> items = shopItem.getItems();
+                                items.add(InventoryItem.builder()
+                                        .itemstackData(itemInHand.serialize())
+                                        .build());
+                                shopItem.setItems(items);
+                                save();
+                                player.sendMessage("成功!");
+                            } else {
+                                player.sendMessage("请手持物品重试");
+                            }
+                            return true;
+                        })
+                        .build())
                 .withCommandSpecExecutor((commandSender, strings) -> {
 
                     return true;

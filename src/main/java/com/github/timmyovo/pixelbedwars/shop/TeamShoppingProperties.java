@@ -32,6 +32,10 @@ public class TeamShoppingProperties {
         this.potionList = new ArrayList<>();
     }
 
+    public static boolean isSword(ItemStack itemStack) {
+        return itemStack.getType().name().contains("SWORD") || itemStack.getType().name().contains("AXE");
+    }
+
     public Integer getTeamItemLevelById(int i) {//0 没买
         return iconLevelMap.getOrDefault(i, 0);
     }
@@ -92,9 +96,5 @@ public class TeamShoppingProperties {
                 gamePlayer.getPlayer().addPotionEffect(potionEffect);
             });
         });
-    }
-
-    public static boolean isSword(ItemStack itemStack) {
-        return itemStack.getType().name().contains("SWORD") || itemStack.getType().name().contains("AXE");
     }
 }

@@ -104,6 +104,14 @@ public class BedwarsGame implements Listener {
         return !bedLocation.equals(east) && !bedLocation.equals(west) && !bedLocation.equals(north) && !bedLocation.equals(south) && !blockLocation.equals(bedLocation);
     }
 
+    public static void addDefaultWeapon(Player player) {
+        ItemStack itemStack = new ItemStack(Material.WOOD_SWORD);
+        ItemMeta itemMeta = itemStack.getItemMeta();
+        itemMeta.spigot().setUnbreakable(true);
+        itemStack.setItemMeta(itemMeta);
+        player.getInventory().addItem(itemStack);
+    }
+
     public BedwarsGame loadGame(GameSetting gameSetting) {
         this.gameState = GameState.LOADING;
         this.gameSetting = gameSetting;
@@ -468,11 +476,7 @@ public class BedwarsGame implements Listener {
             clearPlayerInventory(player);
             player.setMaxHealth(gameSetting.getPlayerMaxHealth());
             player.setHealth(player.getMaxHealth());
-            ItemStack itemStack = new ItemStack(Material.WOOD_SWORD);
-            ItemMeta itemMeta = itemStack.getItemMeta();
-            itemMeta.spigot().setUnbreakable(true);
-            itemStack.setItemMeta(itemMeta);
-            player.getInventory().addItem(itemStack);
+            addDefaultWeapon(player);
         });
         broadcastMessage(language.getGameStart(), null);
         doShopInit();
@@ -554,7 +558,7 @@ public class BedwarsGame implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerClickInventory(InventoryClickEvent inventoryClickEvent) {
         Player whoClicked = (Player) inventoryClickEvent.getWhoClicked();
-        if (gameState != GameState.WAITING) {
+        if (gameState == GameState.WAITING) {
             inventoryClickEvent.setCancelled(true);
         }
     }
@@ -592,7 +596,7 @@ public class BedwarsGame implements Listener {
     public void playerDestroyBed(Player player, GameTeam gameTeam) {
         String playerDestroyBedMessage = getLanguage().getPlayerDestroyBedMessage();
         getBedwarsPlayer(player).addBedDestroyed();
-        sendMessage(player, playerDestroyBedMessage, ImmutableMap.of("%player%", player.getName(), "%team%", gameTeam.getTeamMeta().getTeamName()));
+        broadcastMessage(playerDestroyBedMessage, ImmutableMap.of("%player%", player.getName(), "%team%", gameTeam.getTeamMeta().getTeamName()));
     }
 
     public void playerDestroyBed(GamePlayer player, GameTeam gameTeam) {
@@ -609,17 +613,26 @@ public class BedwarsGame implements Listener {
             Location location = entityExplodeEvent.getLocation();
             location.getWorld().createExplosion(location, getGameSetting().getTntExplodePower());
         }
-        processExplode(entityExplodeEvent.blockList());
+        processExplode(entityExplodeEvent.blockList(), entityExplodeEvent.getLocation());
     }
 
     @EventHandler
     public void onEntityExplode(BlockExplodeEvent blockExplodeEvent) {
-        processExplode(blockExplodeEvent.blockList());
+        processExplode(blockExplodeEvent.blockList(), blockExplodeEvent.getBlock().getLocation());
     }
 
-    private void processExplode(List<Block> blocks) {
+    private void processExplode(List<Block> blocks, Location explosion) {
         for (Block block : new ArrayList<>(blocks)) {
             Location location = block.getLocation();
+            if (block.getType() == Material.STAINED_GLASS) {
+                blocks.remove(block);
+                continue;
+            }
+            if (!isBlockPlacedByHuman(block)) {
+                blocks.remove(block);
+                continue;
+            }
+
             if (getEast(location).getType() == Material.STAINED_GLASS) {
                 blocks.remove(block);
             }
@@ -633,12 +646,6 @@ public class BedwarsGame implements Listener {
                 blocks.remove(block);
             }
             if (getUp(location).getType() == Material.STAINED_GLASS) {
-                blocks.remove(block);
-            }
-            if (getDown(location).getType() == Material.STAINED_GLASS) {
-                blocks.remove(block);
-            }
-            if (!isBlockPlacedByHuman(block)) {
                 blocks.remove(block);
             }
         }
@@ -669,9 +676,7 @@ public class BedwarsGame implements Listener {
     }
 
     private Block getUp(Location location) {
-        BlockPosition blockPosition = new BlockPosition(location.getBlockX(), location.getBlockY(), location.getBlockZ());
-        BlockPosition east = blockPosition.up();
-        return new Location(location.getWorld(), east.getX(), east.getY(), east.getZ()).getBlock();
+        return new Location(location.getWorld(), location.getX(), location.getY() + 1, location.getZ()).getBlock();
     }
 
     private Block getDown(Location location) {
@@ -700,7 +705,7 @@ public class BedwarsGame implements Listener {
         }
         if (blockPlaced.getType() == Material.TNT) {
             Location location = blockPlaced.getLocation();
-            TNTPrimed tntPrimed = (TNTPrimed) location.getWorld().spawnEntity(location, EntityType.PRIMED_TNT);
+            TNTPrimed tntPrimed = (TNTPrimed) location.getWorld().spawnEntity(location.add(0.5, 0, 0.5), EntityType.PRIMED_TNT);
             tntPrimed.setFuseTicks(gameSetting.getTntExplodeDelay());
             location.getBlock().setType(Material.AIR);
         }
@@ -719,6 +724,8 @@ public class BedwarsGame implements Listener {
         } else {
             if (block.getType() == Material.BED_BLOCK) {
                 try {
+                    blockBreakEvent.setCancelled(true);
+                    block.setType(Material.AIR);
                     GameTeam gameTeamByBedLocation = getGameTeamByBedLocation(block);
                     playerDestroyBed(player, gameTeamByBedLocation);
                 } catch (NullPointerException ignored) {
@@ -868,7 +875,7 @@ public class BedwarsGame implements Listener {
         clearPlayerInventory(player);
         GameTeam playerTeam = getPlayerTeam(player);
         playerTeam.getTeamShoppingProperties().notifyTeamEquipmentChange(playerTeam);
-        //todo 发送复活消息
+        addDefaultWeapon(player.getPlayer());
     }
 
     public Location randomLocation(VecLoc3D respawnRegionStartLocation, VecLoc3D respawnRegionEndLocation) {
@@ -1029,7 +1036,7 @@ public class BedwarsGame implements Listener {
     }
 
     public void sendMessage(Player gamePlayer, String string, @Nullable Map<String, String> map) {
-        gamePlayer.sendMessage(formatMessage(string, map));
+        gamePlayer.sendMessage(formatMessage(PlaceholderAPI.setPlaceholders(gamePlayer, string), map));
     }
 
     public void sendMessage(GamePlayer gamePlayer, String string, @Nullable Map<String, String> map) {
@@ -1097,7 +1104,7 @@ public class BedwarsGame implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onChat(AsyncPlayerChatEvent asyncPlayerChatEvent) {
         asyncPlayerChatEvent.setCancelled(true);
-        Bukkit.broadcastMessage(PlaceholderAPI.setPlaceholders(asyncPlayerChatEvent.getPlayer(), String.format(language.getPlayerChatFormat(), asyncPlayerChatEvent.getMessage())));
+        Bukkit.broadcastMessage(PlaceholderAPI.setPlaceholders(asyncPlayerChatEvent.getPlayer(), language.getPlayerChatFormat().replace("%s", asyncPlayerChatEvent.getMessage())));
     }
 
     public GameTeam getPlayerTeam(GamePlayer gamePlayer) {

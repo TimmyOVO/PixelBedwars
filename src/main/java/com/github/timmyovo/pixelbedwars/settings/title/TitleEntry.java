@@ -18,6 +18,6 @@ public class TitleEntry {
 
     public void sendToPlayer(Player player, ImmutableMap<String, String> var) {
         NMSUtils.sendPlayerTitle(player, getTitle(), var);
-        NMSUtils.sendPlayerTitle(player, getSubtitle(), var);
+        NMSUtils.sendPlayerSubtitle(player, getSubtitle(), var);
     }
 }

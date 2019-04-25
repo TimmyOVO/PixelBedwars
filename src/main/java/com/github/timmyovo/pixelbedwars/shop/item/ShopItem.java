@@ -109,6 +109,7 @@ public class ShopItem {
                         ItemMeta itemMeta = itemStack.getItemMeta();
                         itemMeta.spigot().setUnbreakable(true);
                         itemStack.setItemMeta(itemMeta);
+                        gamePlayer.getPlayer().getInventory().remove(Material.WOOD_SWORD);
                     }
                     if (!applyArmor(gamePlayer.getPlayer(), itemStack)) {
                         gamePlayer.getPlayer().getInventory().addItem(itemStack);

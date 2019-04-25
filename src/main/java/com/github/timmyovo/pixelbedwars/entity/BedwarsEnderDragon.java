@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 public class BedwarsEnderDragon extends EntityEnderDragon {
     private BedwarsGame bedwarsGame;
     private GameTeam gameTeam;
+    private int idleTicks;
 
     public BedwarsEnderDragon(World world, GameTeam gameTeam) {
         super(world);
@@ -34,26 +35,38 @@ public class BedwarsEnderDragon extends EntityEnderDragon {
 
     @Override
     public void m() {
-        if (!(target instanceof Player)) {
-            List<GameTeam> collect = bedwarsGame.getTeamList()
-                    .stream()
-                    .filter(gameTeam1 -> !gameTeam1.equals(gameTeam))
-                    .sorted()
-                    .collect(Collectors.toList());
-            Collections.shuffle(collect);
-            if (collect.isEmpty()) {
-                target = null;
-            } else {
-                List<GamePlayer> alivePlayers = new ArrayList<>(collect.get(0).getAlivePlayers());
-                if (alivePlayers.isEmpty()) {
+        if (idleTicks >= 200) {
+            if (!(target instanceof Player)) {
+                List<GameTeam> collect = bedwarsGame.getTeamList()
+                        .stream()
+                        .filter(gameTeam1 -> !gameTeam1.equals(gameTeam))
+                        .sorted()
+                        .collect(Collectors.toList());
+                Collections.shuffle(collect);
+                if (collect.isEmpty()) {
                     target = null;
                 } else {
-                    Collections.shuffle(alivePlayers);
-                    target = ((CraftPlayer) alivePlayers.get(0).getPlayer()).getHandle();
-                }
+                    List<GamePlayer> alivePlayers = new ArrayList<>(collect.get(0).getAlivePlayers());
+                    if (alivePlayers.isEmpty()) {
+                        target = null;
+                    } else {
+                        Collections.shuffle(alivePlayers);
+                        target = ((CraftPlayer) alivePlayers.get(0).getPlayer()).getHandle();
+                    }
 
+                }
+            }
+            if (target != null) {
+                //找到目标
+                idleTicks = 0;
             }
         }
+        this.idleTicks++;
         super.m();
+    }
+
+    @Override
+    protected void aZ() {
+
     }
 }
