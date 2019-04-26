@@ -9,11 +9,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-public class TrapGui {
+public class TrapGui implements Listener {
     private Inventory inventory;
 
     public TrapGui() {
@@ -139,5 +141,17 @@ public class TrapGui {
     public void show(Player player) {
         apply(player);
         player.openInventory(this.inventory);
+    }
+
+    @EventHandler
+    public void onPlayerClickInventory(InventoryClickEvent inventoryClickEvent) {
+        Inventory clickedInventory = inventoryClickEvent.getClickedInventory();
+        if (clickedInventory == null) {
+            return;
+        }
+        if (clickedInventory.getName().equals("排列陷阱")) {
+            inventoryClickEvent.setCancelled(true);
+            notifyClick(inventoryClickEvent);
+        }
     }
 }

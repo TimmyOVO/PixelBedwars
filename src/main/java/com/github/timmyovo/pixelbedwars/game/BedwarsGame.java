@@ -219,6 +219,7 @@ public class BedwarsGame implements Listener {
                 BedwarsGame.this.getGamePlayers().stream()
                         .map(GamePlayer::getPlayer)
                         .forEach(player -> {
+
                             if (isPlayerInvisible(player)) {
                                 getGamePlayers().forEach(gamePlayer -> {
                                     gamePlayer.getPlayer().hidePlayer(player);
@@ -230,12 +231,14 @@ public class BedwarsGame implements Listener {
                                     }
                                 });
                             }
+                            getPlayerTeam(player).updateListName(player);
                             sendActionbar(player, language.getGamingActionbar());
                         });
                 getTeamList().stream()
                         .map(GameTeam::getTeamMeta)
                         .forEach(TeamMeta::tickSpawner);
                 getTrapList().forEach(Trap::tickTrap);
+
                 updateScoreboard();
             }
         }.runTaskTimer(PixelBedwars.getPixelBedwars(), 0L, 10L);
@@ -462,6 +465,7 @@ public class BedwarsGame implements Listener {
         if (!canPlayerRespawn(gamePlayer)) {
             gamePlayer.setTotallyDeath(true);
         }
+
         gamePlayer.addDeath();
         return gamePlayer.isTotallyDeath();
     }
@@ -1169,7 +1173,19 @@ public class BedwarsGame implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onChat(AsyncPlayerChatEvent asyncPlayerChatEvent) {
         asyncPlayerChatEvent.setCancelled(true);
-        Bukkit.broadcastMessage(PlaceholderAPI.setPlaceholders(asyncPlayerChatEvent.getPlayer(), language.getPlayerChatFormat().replace("%s", asyncPlayerChatEvent.getMessage())));
+        if (asyncPlayerChatEvent.getMessage().startsWith("#")) {
+            getPlayerTeam(asyncPlayerChatEvent.getPlayer())
+                    .getTeamPlayers()
+                    .stream()
+                    .map(GamePlayer::getPlayer)
+                    .forEach(player -> {
+                        String message = asyncPlayerChatEvent.getMessage();
+                        message = message.replace("#", "");
+                        player.sendMessage(PlaceholderAPI.setPlaceholders(asyncPlayerChatEvent.getPlayer(), language.getPlayerChatFormat().replace("%s", message)));
+                    });
+        } else {
+            Bukkit.broadcastMessage(PlaceholderAPI.setPlaceholders(asyncPlayerChatEvent.getPlayer(), language.getPlayerChatFormat().replace("%s", asyncPlayerChatEvent.getMessage())));
+        }
     }
 
     public GameTeam getPlayerTeam(GamePlayer gamePlayer) {
@@ -1205,14 +1221,23 @@ public class BedwarsGame implements Listener {
     @EventHandler
     public void onPlayerUsePotion(PlayerItemConsumeEvent playerItemConsumeEvent) {
         ItemStack item = playerItemConsumeEvent.getItem();
+        Player player = playerItemConsumeEvent.getPlayer();
         if (item.getType() == Material.POTION && item.getDurability() == 8270) {
-            Player player = playerItemConsumeEvent.getPlayer();
             setPlayerInvisible(player, true);
             player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 30, 1, false));
             player.sendMessage("你隐身了!");
             Bukkit.getScheduler().runTaskLater(PixelBedwars.getPixelBedwars(), () -> {
                 setPlayerInvisible(player, false);
             }, 30 * 20L);
+        }
+        if (item.getType() == Material.MILK_BUCKET) {
+            player.sendMessage("免疫陷阱60s");
+            player.setMetadata("IGNORE", new FixedMetadataValue(PixelBedwars.getPixelBedwars(), true));
+            Bukkit.getScheduler().runTaskLater(PixelBedwars.getPixelBedwars(), () -> {
+                player.removeMetadata("IGNORE", PixelBedwars.getPixelBedwars());
+            }, 60 * 20L);
+            playerItemConsumeEvent.setCancelled(true);
+            player.setItemInHand(new ItemStack(Material.AIR));
         }
     }
 

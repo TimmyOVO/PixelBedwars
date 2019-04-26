@@ -8,6 +8,7 @@ import com.github.timmyovo.pixelbedwars.game.GameTeam;
 import com.github.timmyovo.pixelbedwars.settings.resource.ResourceSpawner;
 import com.github.timmyovo.pixelbedwars.shop.config.EnchantmentEntry;
 import com.github.timmyovo.pixelbedwars.shop.item.ShopItem;
+import com.github.timmyovo.pixelbedwars.trap.TrapGui;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -69,6 +70,7 @@ public class TeamShopGui implements Listener {
         this.inventory.setItem(13, getResourceMultiplierIcon(player, playerTeam));
         this.inventory.setItem(14, getBaseHealthRegenIcon(player, playerTeam));
         this.inventory.setItem(15, getDoubleDragonIcon(player, playerTeam));
+        this.inventory.setItem(16, getTrapIcon(player));
     }
 
     private ItemStack getEnchantmentSharpnessIcon(Player player, GameTeam gameTeam) {
@@ -241,6 +243,12 @@ public class TeamShopGui implements Listener {
         return itemFactory.pack();
     }
 
+    private ItemStack getTrapIcon(Player player) {
+        ItemFactory itemFactory = new ItemFactory(() -> new ItemStack(Material.LEATHER));
+        itemFactory.setDisplayName("§e陷阱");
+        return itemFactory.pack();
+    }
+
     private ItemStack getBaseHealthRegenIcon(Player player, GameTeam gameTeam) {
         TeamShoppingProperties teamShoppingProperties = gameTeam.getTeamShoppingProperties();
         Integer level = teamShoppingProperties.getTeamItemLevelById(5);//基地生命恢复
@@ -327,6 +335,9 @@ public class TeamShopGui implements Listener {
                 break;
             case 15:
                 requestBuyDoubleDragon(player, playerTeam);
+                break;
+            case 16:
+                new TrapGui().show(player);
                 break;
         }
         applyItems(player);

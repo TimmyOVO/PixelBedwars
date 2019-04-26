@@ -40,6 +40,10 @@ public class ShopCategory {
         getShopItemMap().forEach((i1, shopItem) -> {
             ItemStack itemStack = shopItem.getIcon().toItemStack();
             net.minecraft.server.v1_8_R3.ItemStack asNMSCopy = CraftItemStack.asNMSCopy(itemStack);
+            if (asNMSCopy == null) {
+                inventory.setItem(i1, new ItemStack(Material.AIR));
+                return;
+            }
             if (asNMSCopy.getTag() == null) {
                 asNMSCopy.setTag(new NBTTagCompound());
             }

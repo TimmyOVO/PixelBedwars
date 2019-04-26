@@ -55,17 +55,19 @@ public class GameTeam {
         bedwarsGame.sendMessage(gamePlayer, language.getJoinTeamMessage(), ImmutableMap.of("%team_name%", teamMeta.getFormatTeamName()));
         Objects.requireNonNull(team).addEntry(player.getName());
         player.setDisplayName(teamMeta.getFormatTeamName() + player.getName());
-        StringBuilder s = new StringBuilder(teamMeta.getTeamColor() + teamMeta.getWoolColor().substring(0, 1) + " " + player.getName());
-        for (int i = s.length(); i < 22; i++) {
-            if (i >= 21) {
-                s.append(ChatColor.YELLOW);
-                s.append(player.getHealth());
-            } else {
-                s.append(" ");
-            }
-        }
-        player.setPlayerListName(s.toString());
+
+        player.setPlayerListName(getPlayerListName(player));
         applyPlayerTeamEquipment(player);
+    }
+
+    public String getPlayerListName(Player player) {
+        StringBuilder s = new StringBuilder(teamMeta.getTeamColor() + teamMeta.getWoolColor().substring(0, 1) + " " + player.getName());
+        for (int i = s.length(); i < 16; i++) {
+            s.append(" ");
+        }
+        s.append(ChatColor.YELLOW);
+        s.append(Math.floor(player.getHealth()));
+        return s.toString();
     }
 
     public void applyPlayerTeamEquipment(Player player) {
@@ -135,4 +137,7 @@ public class GameTeam {
     }
 
 
+    public void updateListName(Player player) {
+        player.setPlayerListName(getPlayerListName(player));
+    }
 }

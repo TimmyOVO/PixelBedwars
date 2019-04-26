@@ -34,6 +34,7 @@ import com.github.timmyovo.pixelbedwars.shop.ShopGui;
 import com.github.timmyovo.pixelbedwars.shop.TeamShopGui;
 import com.github.timmyovo.pixelbedwars.shop.category.ShopCategory;
 import com.github.timmyovo.pixelbedwars.shop.item.ShopItem;
+import com.github.timmyovo.pixelbedwars.trap.TrapGui;
 import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -142,6 +143,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
         Bukkit.getPluginManager().registerEvents(playerShopGui, this);
         teamShopGui = new TeamShopGui();
         Bukkit.getPluginManager().registerEvents(teamShopGui, this);
+        Bukkit.getPluginManager().registerEvents(new TrapGui(), this);
         InventoryBuilder inventoryBuilder = InventoryBuilder.builder()
                 .displayName("队伍选择")
                 .size(9)
@@ -1123,7 +1125,14 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         })
                         .build())
                 .childCommandSpec(SubCommandSpec.newBuilder()
-
+                        .addAlias("trap")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
+                            new TrapGui().show(((Player) commandSender));
+                            return true;
+                        })
                         .build())
                 .withCommandSpecExecutor((commandSender, strings) -> {
 
