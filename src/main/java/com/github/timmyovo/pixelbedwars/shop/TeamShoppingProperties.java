@@ -26,6 +26,9 @@ public class TeamShoppingProperties {
     public boolean doubleDragonEnable;
     private Map<Integer, Integer> iconLevelMap;
     private List<PotionEffect> potionList;
+    private boolean blindTrap;
+    private boolean notificationTrap;
+
 
     public TeamShoppingProperties() {
         this.iconLevelMap = new HashMap<>();

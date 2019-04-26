@@ -1013,7 +1013,17 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
 
                             ShopItem shopItem = shopCategory.getShopItemMap().get(Integer.valueOf(strings[1]));
                             if (shopItem == null) {
-                                player.sendMessage("未找到对应商品");
+                                shopItem = ShopItem.builder()
+                                        .icon(InventoryItem.builder()
+                                                .itemstackData(new ItemStack(Material.WOOL).serialize())
+                                                .build())
+                                        .requireItem(InventoryItem.builder()
+                                                .itemstackData(new ItemStack(Material.IRON_INGOT).serialize())
+                                                .build())
+                                        .items(Collections.singletonList(InventoryItem.builder()
+                                                .itemstackData(new ItemStack(Material.WOOL).serialize())
+                                                .build()))
+                                        .build();
                                 return true;
                             }
 
@@ -1067,42 +1077,6 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         })
                         .build())
                 .childCommandSpec(SubCommandSpec.newBuilder()
-                        .addAlias("setShopItemIcon")
-                        .withCommandSpecExecutor((commandSender, strings) -> {
-                            if (!(commandSender instanceof Player)) {
-                                return true;
-                            }
-                            if (strings.length < 2) {
-                                commandSender.sendMessage("/pb setShopItemIcon 分类ID 格子ID");
-                                return true;
-                            }
-                            Player player = (Player) commandSender;
-                            ShopCategory shopCategory = getPlayerShop().getCategoryItems().get(Integer.valueOf(strings[0]));
-                            if (shopCategory == null) {
-                                commandSender.sendMessage("未找到指定分类");
-                                return true;
-                            }
-
-                            ShopItem shopItem = shopCategory.getShopItemMap().get(Integer.valueOf(strings[1]));
-                            if (shopItem == null) {
-                                player.sendMessage("未找到对应商品");
-                                return true;
-                            }
-
-                            ItemStack itemInHand = player.getInventory().getItemInHand();
-                            if (itemInHand != null) {
-                                shopItem.setIcon(InventoryItem.builder()
-                                        .itemstackData(itemInHand.serialize())
-                                        .build());
-                                save();
-                                player.sendMessage("成功!");
-                            } else {
-                                player.sendMessage("请手持物品重试");
-                            }
-                            return true;
-                        })
-                        .build())
-                .childCommandSpec(SubCommandSpec.newBuilder()
                         .addAlias("setShopItem")
                         .withCommandSpecExecutor((commandSender, strings) -> {
                             if (!(commandSender instanceof Player)) {
@@ -1139,6 +1113,16 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             }
                             return true;
                         })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("startGame")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            pixelBedwars.getBedwarsGame().startGame();
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+
                         .build())
                 .withCommandSpecExecutor((commandSender, strings) -> {
 

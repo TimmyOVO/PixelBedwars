@@ -6,9 +6,12 @@ import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
 import com.github.timmyovo.pixelbedwars.game.GamePlayer;
 import com.github.timmyovo.pixelbedwars.game.GameTeam;
 import com.github.timmyovo.pixelbedwars.settings.Language;
+import com.github.timmyovo.pixelbedwars.shop.item.ShopItem;
 import me.clip.placeholderapi.external.EZPlaceholderHook;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Field;
@@ -64,6 +67,14 @@ public class PlaceholderHook extends EZPlaceholderHook {
                 return "未选择";
             }
             return playerTeam.getTeamMeta().getFormatTeamName();
+        }
+        if (s.startsWith("item")) {
+            String[] split = s.split("#");
+            if (ShopItem.hasEnoughItems(player, new ItemStack(Material.valueOf(split[1]), Integer.valueOf(split[2])))) {
+                return ChatColor.GREEN + "购买可用";
+            } else {
+                return ChatColor.RED + "你没有足够的物品";
+            }
         }
         if (s.startsWith("status")) {
             if (s.contains("#")) {

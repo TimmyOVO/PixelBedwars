@@ -29,6 +29,7 @@ import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
@@ -632,21 +633,77 @@ public class BedwarsGame implements Listener {
                 blocks.remove(block);
                 continue;
             }
+            BlockFace blockFace = getBlockFace(explosion.getBlock(), block);
+            switch (blockFace) {
+                case WEST:
+                    if (getWest(block.getLocation()).getType() == Material.STAINED_GLASS) {
+                        blocks.remove(block);
+                    }
+                    break;
+                case NORTH_WEST:
+                    if (getWest(block.getLocation()).getType() == Material.STAINED_GLASS && getNorth(block.getLocation()).getType() == Material.STAINED_GLASS) {
+                        blocks.remove(block);
+                    }
+                    break;
+                case SOUTH_WEST:
+                    if (getWest(block.getLocation()).getType() == Material.STAINED_GLASS && getSouth(block.getLocation()).getType() == Material.STAINED_GLASS) {
+                        blocks.remove(block);
+                    }
+                    break;
+                case SOUTH:
+                    if (getSouth(block.getLocation()).getType() == Material.STAINED_GLASS) {
+                        blocks.remove(block);
+                    }
+                    break;
+                case SOUTH_EAST:
+                    if (getSouth(block.getLocation()).getType() == Material.STAINED_GLASS && getEast(block.getLocation()).getType() == Material.STAINED_GLASS) {
+                        blocks.remove(block);
+                    }
+                    break;
+                case EAST:
+                    if (getEast(block.getLocation()).getType() == Material.STAINED_GLASS) {
+                        blocks.remove(block);
+                    }
+                    break;
+                case NORTH_EAST:
+                    if (getNorth(block.getLocation()).getType() == Material.STAINED_GLASS && getEast(block.getLocation()).getType() == Material.STAINED_GLASS) {
+                        blocks.remove(block);
+                    }
+                    break;
+                case SELF:
+                    if (getUp(block.getLocation()).getType() == Material.STAINED_GLASS) {
+                        blocks.remove(block);
+                    }
+                    break;
+            }
+        }
+    }
 
-            if (getEast(location).getType() == Material.STAINED_GLASS) {
-                blocks.remove(block);
+    private BlockFace getBlockFace(Block block, Block block1) {
+        Location subtract = block.getLocation().subtract(block1.getLocation());
+        if (subtract.getX() < 0) {
+            if (subtract.getZ() < 0) {
+                return BlockFace.NORTH_WEST;
+            } else if (subtract.getZ() == 0) {
+                return BlockFace.WEST;
+            } else {
+                return BlockFace.SOUTH_WEST;
             }
-            if (getWest(location).getType() == Material.STAINED_GLASS) {
-                blocks.remove(block);
+        } else if (subtract.getX() == 0) {
+            if (subtract.getZ() < 0) {
+                return BlockFace.NORTH;
+            } else if (subtract.getZ() == 0) {
+                return BlockFace.SELF;
+            } else {
+                return BlockFace.SOUTH;
             }
-            if (getNorth(location).getType() == Material.STAINED_GLASS) {
-                blocks.remove(block);
-            }
-            if (getSouth(location).getType() == Material.STAINED_GLASS) {
-                blocks.remove(block);
-            }
-            if (getUp(location).getType() == Material.STAINED_GLASS) {
-                blocks.remove(block);
+        } else {
+            if (subtract.getZ() < 0) {
+                return BlockFace.NORTH_EAST;
+            } else if (subtract.getZ() == 0) {
+                return BlockFace.EAST;
+            } else {
+                return BlockFace.SOUTH_EAST;
             }
         }
     }

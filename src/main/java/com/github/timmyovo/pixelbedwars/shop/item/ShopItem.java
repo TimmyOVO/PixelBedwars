@@ -62,10 +62,13 @@ public class ShopItem {
             if (content.isSimilar(itemStack)) {
                 if (content.getAmount() >= requireAmount) {
                     content.setAmount(content.getAmount() - requireAmount);
+                    if (content.getAmount() == 0) {
+                        inventory.setItem(i, new ItemStack(Material.AIR));
+                    }
                     return true;
                 } else {
                     requireAmount -= content.getAmount();
-                    content.setAmount(0);
+                    inventory.setItem(i, new ItemStack(Material.AIR));
                 }
             }
         }

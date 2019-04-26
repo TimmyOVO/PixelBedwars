@@ -19,6 +19,7 @@ public class GamePlayer {
     private int finalKills;
     private int bedDestroyed;
     private boolean respawning;
+    private boolean teamChat;
     private boolean totallyDeath;
 
     public GamePlayer(Player player) {
@@ -29,6 +30,7 @@ public class GamePlayer {
         this.bedDestroyed = 0;
         this.respawning = false;
         this.totallyDeath = false;
+        this.teamChat = true;
     }
 
     public void addDeath() {
