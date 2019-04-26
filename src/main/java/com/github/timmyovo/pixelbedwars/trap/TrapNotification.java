@@ -4,14 +4,13 @@ import com.github.timmyovo.pixelbedwars.PixelBedwars;
 import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
 import com.github.timmyovo.pixelbedwars.game.GameTeam;
 import org.bukkit.entity.Player;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
-public class TrapBlind extends Trap {
+public class TrapNotification extends Trap {
     @Override
     public void executeTrap(Player player) {
-        player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 5, 1));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 5, 1));
+        PixelBedwars.getPixelBedwars().getBedwarsGame().getGamePlayers().forEach(gamePlayer -> {
+            gamePlayer.getPlayer().showPlayer(player);
+        });
     }
 
     @Override

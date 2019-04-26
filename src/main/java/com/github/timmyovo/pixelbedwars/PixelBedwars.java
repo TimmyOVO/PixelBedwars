@@ -78,6 +78,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     private DatabaseManager databaseManagerBase;
     private LoadingCache<Player, PlayerStatisticModel> playerPlayerStatisticModelLoadingCache;
 
+
     public static PixelBedwars getPixelBedwars() {
         return pixelBedwars;
     }

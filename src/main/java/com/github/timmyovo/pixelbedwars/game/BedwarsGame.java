@@ -12,6 +12,7 @@ import com.github.timmyovo.pixelbedwars.settings.Language;
 import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import com.github.timmyovo.pixelbedwars.shop.TeamShoppingProperties;
+import com.github.timmyovo.pixelbedwars.trap.*;
 import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
 import com.gmail.filoghost.holographicdisplays.api.Hologram;
 import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
@@ -88,6 +89,7 @@ public class BedwarsGame implements Listener {
     private Language language;
 
     private Map<UUID, Corpses.CorpseData> playerCorpseDataMap;
+    private List<Trap> trapList;
 
     public static boolean checkTeamBedLocation(Block block, GameTeam gameTeam) {
         return checkTeamBedLocation(block, gameTeam.getTeamMeta().getTeamBedLocation().toBukkitLocation());
@@ -127,6 +129,11 @@ public class BedwarsGame implements Listener {
         Location location = gameSetting.getPlayerRespawnWaitLocation().toBukkitLocation();
         checkChunk(location);
         location.getWorld().getWorldBorder().reset();
+        this.trapList = new ArrayList<>();
+        this.trapList.add(new TrapBlind());
+        this.trapList.add(new TrapSpeed());
+        this.trapList.add(new TrapNotification());
+        this.trapList.add(new TrapDigSpeed());
         this.teamList = gameSetting.getTeamMetaList()
                 .stream()
                 .map(teamMeta -> {
@@ -228,6 +235,7 @@ public class BedwarsGame implements Listener {
                 getTeamList().stream()
                         .map(GameTeam::getTeamMeta)
                         .forEach(TeamMeta::tickSpawner);
+                getTrapList().forEach(Trap::tickTrap);
                 updateScoreboard();
             }
         }.runTaskTimer(PixelBedwars.getPixelBedwars(), 0L, 10L);

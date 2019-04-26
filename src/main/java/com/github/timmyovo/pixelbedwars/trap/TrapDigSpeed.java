@@ -7,11 +7,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-public class TrapBlind extends Trap {
+public class TrapDigSpeed extends Trap {
     @Override
     public void executeTrap(Player player) {
-        player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 5, 1));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 5, 1));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_DIGGING, 10, 1));
     }
 
     @Override

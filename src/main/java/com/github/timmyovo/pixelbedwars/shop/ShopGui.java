@@ -56,6 +56,7 @@ public class ShopGui implements Listener {
     }
 
     public void show(Player gamePlayer) {
+        applyCategory();
         gamePlayer.openInventory(inventory);
     }
 
@@ -66,6 +67,9 @@ public class ShopGui implements Listener {
             return;
         }
         net.minecraft.server.v1_8_R3.ItemStack asNmsCopy = CraftItemStack.asNMSCopy(currentItem);
+        if (asNmsCopy == null) {
+            return;
+        }
         NBTTagCompound tag = asNmsCopy.getTag();
         if (tag == null) {
             return;

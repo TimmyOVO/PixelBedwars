@@ -127,13 +127,14 @@ public class ShopItem {
     }
 
     public boolean applyArmor(Player player, ItemStack itemStack) {
-        GameTeam.disableItemDrop(itemStack);
+
         PlayerInventory inventory = player.getInventory();
         if (itemStack.getType().name().contains("HELMET")) {
             ItemMeta itemMeta = itemStack.getItemMeta();
             itemMeta.spigot().setUnbreakable(true);
             itemStack.setItemMeta(itemMeta);
             inventory.setHelmet(itemStack);
+            GameTeam.disableItemDrop(itemStack);
             return true;
         }
         if (itemStack.getType().name().contains("CHESTPLATE")) {
@@ -141,6 +142,7 @@ public class ShopItem {
             itemMeta.spigot().setUnbreakable(true);
             itemStack.setItemMeta(itemMeta);
             inventory.setChestplate(itemStack);
+            GameTeam.disableItemDrop(itemStack);
             return true;
         }
         if (itemStack.getType().name().contains("LEGGINGS")) {
@@ -148,6 +150,7 @@ public class ShopItem {
             itemMeta.spigot().setUnbreakable(true);
             itemStack.setItemMeta(itemMeta);
             inventory.setLeggings(itemStack);
+            GameTeam.disableItemDrop(itemStack);
             return true;
         }
         if (itemStack.getType().name().contains("BOOTS")) {
@@ -155,6 +158,7 @@ public class ShopItem {
             itemMeta.spigot().setUnbreakable(true);
             itemStack.setItemMeta(itemMeta);
             inventory.setBoots(itemStack);
+            GameTeam.disableItemDrop(itemStack);
             return true;
         }
         return false;

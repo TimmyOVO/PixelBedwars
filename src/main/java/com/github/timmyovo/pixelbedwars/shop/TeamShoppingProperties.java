@@ -28,7 +28,12 @@ public class TeamShoppingProperties {
     private List<PotionEffect> potionList;
     private boolean blindTrap;
     private boolean notificationTrap;
-
+    private boolean speedupTrap;
+    private boolean digSpeedTrap;
+    private int blindTrap0;
+    private int notificationTrap0;
+    private int speedupTrap0;
+    private int digSpeedTrap0;
 
     public TeamShoppingProperties() {
         this.iconLevelMap = new HashMap<>();
