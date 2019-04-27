@@ -4,6 +4,7 @@ import com.github.skystardust.ultracore.bukkit.models.VecLoc3D;
 import com.github.skystardust.ultracore.bukkit.modules.item.ItemFactory;
 import com.github.skystardust.ultracore.core.database.newgen.DatabaseManager;
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
+import com.github.timmyovo.pixelbedwars.database.PlayerRejoinModel;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
 import com.github.timmyovo.pixelbedwars.entity.*;
 import com.github.timmyovo.pixelbedwars.game.task.PlayerRespawnTask;
@@ -342,27 +343,11 @@ public class BedwarsGame implements Listener {
         }
     }
 
-    public void endGame() {
-        if (gameState != GameState.GAMING) {
-            return;
-        }
-        this.gameState = GameState.END;
-        broadcastMessage(language.getGameEndMessage(), null);
-        calWinner();
-        calStatistic();
-        this.getGamePlayers().forEach(gamePlayer -> {
-            gamePlayer.getPlayer().setGameMode(GameMode.SPECTATOR);
-            gamePlayer.getPlayer().teleport(gameSetting.getPlayerRespawnWaitLocation().toBukkitLocation());
-        });
-        this.getGamePlayers().stream()
-                .map(GamePlayer::getPlayer)
-                .forEach(this::sendToHub);
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                Bukkit.spigot().restart();
-            }
-        }.runTaskLater(PixelBedwars.getPixelBedwars(), gameSetting.getServerRestartDelay() * 20L);
+    public static void sendToServer(Player player, String serverName) {
+        ByteArrayDataOutput byteArrayDataOutput = ByteStreams.newDataOutput();
+        byteArrayDataOutput.writeUTF("Connect");
+        byteArrayDataOutput.writeUTF(serverName);
+        player.sendPluginMessage(PixelBedwars.getPixelBedwars(), "BungeeCord", byteArrayDataOutput.toByteArray());
     }
 
     public void calStatistic() {
@@ -435,19 +420,33 @@ public class BedwarsGame implements Listener {
                 .orElse(null);
     }
 
-    public void playerLeave(Player player) {
-        broadcastMessage(language.getPlayerQuitMessage(), ImmutableMap.of("%player%", player.getDisplayName()));
-        if (gameState == GameState.GAMING) {
+    public void endGame() {
+        if (gameState != GameState.GAMING) {
             return;
         }
-        gamePlayers.remove(getBedwarsPlayer(player));
-        GameTeam playerTeam = getPlayerTeam(player);
-        if (playerTeam == null) {
-            return;
-        }
-
-        playerTeam.removePlayer(player);
-        resetPlayer(player);
+        this.gameState = GameState.END;
+        broadcastMessage(language.getGameEndMessage(), null);
+        PlayerRejoinModel.db()
+                .find(PlayerRejoinModel.class)
+                .where()
+                .eq("serverName", PixelBedwars.getPixelBedwars().getServerName())
+                .findList()
+                .forEach(PlayerRejoinModel::delete);
+        calWinner();
+        calStatistic();
+        this.getGamePlayers().forEach(gamePlayer -> {
+            gamePlayer.getPlayer().setGameMode(GameMode.SPECTATOR);
+            gamePlayer.getPlayer().teleport(gameSetting.getPlayerRespawnWaitLocation().toBukkitLocation());
+        });
+        this.getGamePlayers().stream()
+                .map(GamePlayer::getPlayer)
+                .forEach(this::sendToHub);
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                Bukkit.spigot().restart();
+            }
+        }.runTaskLater(PixelBedwars.getPixelBedwars(), gameSetting.getServerRestartDelay() * 20L);
     }
 
     public void resetPlayer(Player player) {
@@ -1103,11 +1102,20 @@ public class BedwarsGame implements Listener {
                 .orElseThrow(NullPointerException::new);
     }
 
-    public void sendToServer(Player player, String serverName) {
-        ByteArrayDataOutput byteArrayDataOutput = ByteStreams.newDataOutput();
-        byteArrayDataOutput.writeUTF("Connect");
-        byteArrayDataOutput.writeUTF(serverName);
-        player.sendPluginMessage(PixelBedwars.getPixelBedwars(), "BungeeCord", byteArrayDataOutput.toByteArray());
+    public void playerLeave(Player player) {
+        broadcastMessage(language.getPlayerQuitMessage(), ImmutableMap.of("%player%", player.getDisplayName()));
+        if (gameState == GameState.GAMING) {
+            new PlayerRejoinModel(player.getUniqueId(), PixelBedwars.getPixelBedwars().getServerName()).save();
+            return;
+        }
+        gamePlayers.remove(getBedwarsPlayer(player));
+        GameTeam playerTeam = getPlayerTeam(player);
+        if (playerTeam == null) {
+            return;
+        }
+
+        playerTeam.removePlayer(player);
+        resetPlayer(player);
     }
 
     public void sendToHub(Player player) {

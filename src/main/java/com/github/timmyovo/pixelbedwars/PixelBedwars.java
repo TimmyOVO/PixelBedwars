@@ -14,6 +14,7 @@ import com.github.skystardust.ultracore.core.database.newgen.DatabaseManager;
 import com.github.skystardust.ultracore.core.exceptions.ConfigurationException;
 import com.github.skystardust.ultracore.core.exceptions.DatabaseInitException;
 import com.github.skystardust.ultracore.core.utils.FileUtils;
+import com.github.timmyovo.pixelbedwars.database.PlayerRejoinModel;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
 import com.github.timmyovo.pixelbedwars.entity.BedwarsEgg;
 import com.github.timmyovo.pixelbedwars.entity.BedwarsEnderDragon;
@@ -41,7 +42,10 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteStreams;
 import lombok.Getter;
+import lombok.Setter;
 import net.minecraft.server.v1_8_R3.EntityEnderDragon;
 import net.minecraft.server.v1_8_R3.WorldServer;
 import org.bukkit.*;
@@ -53,8 +57,10 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -65,6 +71,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Getter
+@Setter
 public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     private static PixelBedwars pixelBedwars;
     private CorpsesManager corpsesManager;
@@ -79,6 +86,8 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     private DatabaseManager databaseManagerBase;
     private LoadingCache<Player, PlayerStatisticModel> playerPlayerStatisticModelLoadingCache;
 
+    private String serverName = "default";
+
 
     public static PixelBedwars getPixelBedwars() {
         return pixelBedwars;
@@ -87,10 +96,51 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     @Override
     public void onEnable() {
         PixelBedwars.pixelBedwars = this;
+        if (new File(getDataFolder(), "rejoin.options").exists()) {
+            MainCommandSpec.newBuilder()
+                    .addAlias("rejoin")
+                    .addAlias("rj")
+                    .withCommandSpecExecutor((commandSender, strings) -> {
+                        if (!(commandSender instanceof Player)) {
+                            return true;
+                        }
+                        Player player = (Player) commandSender;
+                        PlayerRejoinModel playerRejoinModel = PlayerRejoinModel.db()
+                                .find(PlayerRejoinModel.class, player.getUniqueId());
+                        if (playerRejoinModel == null) {
+                            commandSender.sendMessage("无法找到上一局游戏可能已经结束或不可用!");
+                            return true;
+                        }
+                        BedwarsGame.sendToServer(player, playerRejoinModel.getServerName());
+                        return true;
+                    })
+                    .build()
+                    .register();
+            return;
+        }
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
-        getServer().getMessenger().registerIncomingPluginChannel(this, "BungeeCord", (s, player, bytes) -> {
+        Bukkit.getMessenger().registerIncomingPluginChannel(this, "BungeeCord", (channel, player, message) -> {
+            if (!channel.equalsIgnoreCase("BungeeCord")) {
+                return;
+            }
+            if (serverName == null || serverName.isEmpty()) {
+                ByteArrayDataInput byteArrayDataInput = ByteStreams.newDataInput(message);
+                System.out.println("channel: " + byteArrayDataInput.readUTF());
+                setServerName(byteArrayDataInput.readUTF());
+                getLogger().info("服务器名字自动设置完成!");
+                getLogger().info("服务器名字设置为: " + serverName);
+            }
 
         });
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (serverName == null || serverName.isEmpty()) {
+                    getLogger().warning("警告: 插件正在等待玩家进入游戏初始化重连功能");
+                    getLogger().warning("在此之前重连功能无法使用!");
+                }
+            }
+        }.runTask(this);
         boot();
         if (!initDatabase()) {
             return;
@@ -187,7 +237,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
             DatabaseManager gamebattle_database = DatabaseManager.newBuilder()
                     .withName("gamebattle_database")
                     .withOwnerPlugin(this)
-                    .withModelClass(Arrays.asList(PlayerStatisticModel.class))
+                    .withModelClass(Arrays.asList(PlayerStatisticModel.class, PlayerRejoinModel.class))
                     .withSqlConfiguration(sqlConfiguration)
                     .build();
             gamebattle_database
