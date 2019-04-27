@@ -437,11 +437,15 @@ public class BedwarsGame implements Listener {
 
     public void playerLeave(Player player) {
         broadcastMessage(language.getPlayerQuitMessage(), ImmutableMap.of("%player%", player.getDisplayName()));
+        if (gameState == GameState.GAMING) {
+            return;
+        }
         gamePlayers.remove(getBedwarsPlayer(player));
         GameTeam playerTeam = getPlayerTeam(player);
         if (playerTeam == null) {
             return;
         }
+
         playerTeam.removePlayer(player);
         resetPlayer(player);
     }
@@ -532,11 +536,14 @@ public class BedwarsGame implements Listener {
     }
 
     public void playerJoin(Player player) {
-        if (gameState != GameState.WAITING) {
-            player.setGameMode(GameMode.SPECTATOR);
-            player.setFlying(true);
-        }
         if (hasPlayer(player)) {
+            getBedwarsPlayer(player).setPlayer(player);
+            if (getBedwarsPlayer(player).isTotallyDeath()) {
+                player.setGameMode(GameMode.SPECTATOR);
+                player.setFlying(true);
+            } else {
+                player.teleport(getPlayerTeam(player).getTeamMeta().getTeamGameLocation().toBukkitLocation());
+            }
             return;
         }
         if (this.getGamePlayers().size() + 1 > gameSetting.getMaxPlayer()) {
@@ -1117,13 +1124,14 @@ public class BedwarsGame implements Listener {
         if (gamePlayer != null) {
             if (!gamePlayer.isTotallyDeath()) {
                 gamePlayer.setRespawning(true);
+                new PlayerRespawnTask(gamePlayer).start();
             }
             player.setGameMode(GameMode.SPECTATOR);
             playerRespawnEvent.setRespawnLocation(playerTeam.getTeamMeta().getTeamGameLocation().toBukkitLocation());
             if (!canGameContinue()) {
                 endGame();
+                return;
             }
-            new PlayerRespawnTask(gamePlayer).start();
         }
     }
 
@@ -1144,8 +1152,13 @@ public class BedwarsGame implements Listener {
 
     @EventHandler
     public void onPlayerPreLogin(AsyncPlayerPreLoginEvent playerPreLoginEvent) {
-        if (gameState != GameState.WAITING) {
-            playerPreLoginEvent.disallow(AsyncPlayerPreLoginEvent.Result.KICK_FULL, "游戏无法中途加入");
+        if (gameState == GameState.GAMING) {
+            if (getTeamList().stream()
+                    .map(GameTeam::getTeam)
+                    .map(Team::getEntries)
+                    .noneMatch(e -> e.stream().anyMatch(str -> str.equals(playerPreLoginEvent.getName())))) {
+                playerPreLoginEvent.disallow(AsyncPlayerPreLoginEvent.Result.KICK_FULL, "无法加入.");
+            }
         }
     }
 

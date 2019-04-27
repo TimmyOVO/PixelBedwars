@@ -24,6 +24,9 @@ public class PlaceholderHook extends EZPlaceholderHook {
 
     @Override
     public String onPlaceholderRequest(Player player, String s) {
+        if (player == null) {
+            return s;
+        }
         Language language = PixelBedwars.getPixelBedwars().getLanguage();
         BedwarsGame bedwarsGame = PixelBedwars.getPixelBedwars().getBedwarsGame();
         if (s.equalsIgnoreCase("nextstage")) {

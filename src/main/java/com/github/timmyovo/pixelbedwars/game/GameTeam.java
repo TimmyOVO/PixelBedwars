@@ -138,6 +138,11 @@ public class GameTeam {
 
 
     public void updateListName(Player player) {
+        GamePlayer bedwarsPlayer = bedwarsGame.getBedwarsPlayer(player);
+        if (bedwarsPlayer.isTotallyDeath()) {
+            player.setPlayerListName(player.getName());
+            return;
+        }
         player.setPlayerListName(getPlayerListName(player));
     }
 }
