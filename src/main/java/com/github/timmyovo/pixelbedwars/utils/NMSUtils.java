@@ -140,6 +140,12 @@ public class NMSUtils {
         if (killer != null) {
             return Optional.of(killer);
         }
+        EntityLiving lastDamager = ((CraftPlayer) player).getHandle().lastDamager;
+        if (lastDamager != null) {
+            if (lastDamager instanceof EntityPlayer) {
+                return Optional.of(((EntityPlayer) lastDamager).getBukkitEntity());
+            }
+        }
         if (player.getLastDamageCause() instanceof EntityDamageByEntityEvent) {
             EntityDamageByEntityEvent lastDamageCause = (EntityDamageByEntityEvent) player.getLastDamageCause();
             if (lastDamageCause.getDamager() instanceof Projectile) {

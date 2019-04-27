@@ -57,4 +57,11 @@ public class Language {
 
     private Map<Integer, TitleEntry> respawnTitles;
     private String fireballCoolingDownMessage;
+
+    private String canNotBreakBlock;
+    private String breakBedDenied;
+    private String seizeDiamond;
+    private String seizeIron;
+    private String seizeGold;
+    private String seizeEmerald;
 }

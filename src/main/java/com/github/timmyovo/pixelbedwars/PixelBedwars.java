@@ -599,6 +599,12 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                     .build();
         })
                 .registerConfiguration("language", () -> Language.builder()
+                        .seizeIron("+%s个铁锭")
+                        .seizeGold("+%s个金锭")
+                        .seizeDiamond("+%s个钻石")
+                        .seizeEmerald("+%s个绿宝石")
+                        .breakBedDenied("你不能破坏自己队伍的床")
+                        .canNotBreakBlock("你只能破坏人为放置的方块")
                         .respawnTitles(ImmutableMap.<Integer, TitleEntry>builder()
                                 .put(1, TitleEntry.builder()
                                         .title("§c等待复活")

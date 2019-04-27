@@ -586,7 +586,11 @@ public class BedwarsGame implements Listener {
 
     private boolean isBlockBreakable(Player player, Block block) {
         boolean human = isBlockPlacedByHuman(block) || block.getType() == Material.BED_BLOCK;
-        return human && canBreakBed(player, block);
+        if (!human) {
+            sendMessage(player, getLanguage().getCanNotBreakBlock(), new HashMap<>());
+            return false;
+        }
+        return canBreakBed(player, block);
     }
 
     private boolean isBlockPlacedByHuman(Block block) {
@@ -603,7 +607,11 @@ public class BedwarsGame implements Listener {
     private boolean canBreakBed(Player player, Block block) {
         //如果破坏的方块周围有任何方块是自己队伍的,阻止掉
         GameTeam playerTeam = getPlayerTeam(player);
-        return checkTeamBedLocation(block, playerTeam);
+        boolean b = checkTeamBedLocation(block, playerTeam);
+        if (!b) {
+            sendMessage(player, getLanguage().getBreakBedDenied(), new HashMap<>());
+        }
+        return b;
     }
 
     public void playerDestroyBed(Player player, GameTeam gameTeam) {
@@ -822,7 +830,7 @@ public class BedwarsGame implements Listener {
                     player.teleport(gameSetting.getPlayerWaitLocation().toBukkitLocation());
                 }
                 if (gameState == GameState.GAMING) {
-                    player.setHealth(0);
+                    entityDamageEvent.setDamage(Integer.MAX_VALUE);
                 }
             }
         }
@@ -883,27 +891,64 @@ public class BedwarsGame implements Listener {
         Player entity = playerDeathEvent.getEntity();
         playerDeathEvent.setKeepInventory(true);
         if (hasPlayer(entity)) {
-            playerDeathEvent.setDeathMessage(null);
+            playerDeathEvent.setDeathMessage("");
             GamePlayer gamePlayer = getBedwarsPlayer(entity);
             gamePlayer.addDeath();
-            EntityLiving lastDamager = ((CraftPlayer) gamePlayer.getPlayer()).getHandle().lastDamager;
-            if (lastDamager != null) {
-                if (lastDamager instanceof EntityPlayer) {
-                    CraftPlayer bukkitEntity = (CraftPlayer) lastDamager.getBukkitEntity();
-                    GamePlayer player = getBedwarsPlayer(bukkitEntity);
-                    if (player != null) {
-                        if (isTeamDead(getPlayerTeam(entity))) {
-                            player.addFinalKills();
-                        } else {
-                            player.addKill();
-                        }
-                        broadcastMessage(language.getPlayerKillOthersMessage(), ImmutableMap.of("%killer%", player.getPlayer().getDisplayName(), "%player%", entity.getDisplayName()));
+            Optional<Player> lastDamagerOptional = NMSUtils.getPlayerKiller(entity);
+            if (lastDamagerOptional.isPresent()) {
+                Player lastDamager = lastDamagerOptional.get();
+                GamePlayer player = getBedwarsPlayer(lastDamager);
+                if (player != null) {
+                    if (isTeamDead(getPlayerTeam(entity))) {
+                        player.addFinalKills();
+                    } else {
+                        player.addKill();
                     }
+                    entity.getInventory().all(Material.DIAMOND).forEach((i, ii) -> {
+                        player.getPlayer().getInventory().addItem(ii);
+                        int sum = entity.getInventory().all(Material.DIAMOND)
+                                .entrySet()
+                                .stream()
+                                .map(Map.Entry::getValue)
+                                .mapToInt(ItemStack::getAmount)
+                                .sum();
+                        sendMessage(lastDamager, language.getSeizeDiamond(), ImmutableMap.of("%s", String.valueOf(sum)));
+                    });
+                    entity.getInventory().all(Material.IRON_INGOT).forEach((i, ii) -> {
+                        player.getPlayer().getInventory().addItem(ii);
+                        int sum = entity.getInventory().all(Material.IRON_INGOT)
+                                .entrySet()
+                                .stream()
+                                .map(Map.Entry::getValue)
+                                .mapToInt(ItemStack::getAmount)
+                                .sum();
+                        sendMessage(lastDamager, language.getSeizeIron(), ImmutableMap.of("%s", String.valueOf(sum)));
+                    });
+                    entity.getInventory().all(Material.GOLD_INGOT).forEach((i, ii) -> {
+                        player.getPlayer().getInventory().addItem(ii);
+                        int sum = entity.getInventory().all(Material.GOLD_INGOT)
+                                .entrySet()
+                                .stream()
+                                .map(Map.Entry::getValue)
+                                .mapToInt(ItemStack::getAmount)
+                                .sum();
+                        sendMessage(lastDamager, language.getSeizeGold(), ImmutableMap.of("%s", String.valueOf(sum)));
+                    });
+                    entity.getInventory().all(Material.EMERALD).forEach((i, ii) -> {
+                        player.getPlayer().getInventory().addItem(ii);
+                        int sum = entity.getInventory().all(Material.EMERALD)
+                                .entrySet()
+                                .stream()
+                                .map(Map.Entry::getValue)
+                                .mapToInt(ItemStack::getAmount)
+                                .sum();
+                        sendMessage(lastDamager, language.getSeizeEmerald(), ImmutableMap.of("%s", String.valueOf(sum)));
+                    });
+                    broadcastMessage(language.getPlayerKillOthersMessage(), ImmutableMap.of("%killer%", player.getPlayer().getDisplayName(), "%player%", entity.getDisplayName()));
                 }
             } else {
                 broadcastMessage(language.getPlayerSuicideMessage(), ImmutableMap.of("%player%", entity.getDisplayName()));
             }
-
 
             PixelBedwars pixelBedwars = PixelBedwars.getPixelBedwars();
             if (gameSetting.isPlayerCorpseEnable()) {
@@ -1257,34 +1302,44 @@ public class BedwarsGame implements Listener {
     @EventHandler
     public void onPlayerTargetOthers(PlayerInteractEvent playerInteractEvent) {
         Player player = playerInteractEvent.getPlayer();
+        ItemStack itemInHand = player.getItemInHand();
+        if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            if (itemInHand != null && itemInHand.getType().name().contains("BUCKET")) {
+                if (getTeamList().stream()
+                        .anyMatch(gameTeam -> gameTeam.getTeamMeta().getTeamGameLocation().toBukkitLocation().distance(playerInteractEvent.getClickedBlock().getLocation()) <= 12)) {
+                    playerInteractEvent.setCancelled(true);
+                }
+            }
+        }
         if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_AIR || playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            ItemStack hand = player.getItemInHand();
-            if (hand.getType() == Material.FIREBALL) {
+            if (itemInHand == null) {
+                return;
+            }
+            if (itemInHand.getType() == Material.FIREBALL) {
                 float fireballCooldown = getFireballCooldown(player);
-                System.out.println(fireballCooldown);
                 if (fireballCooldown <= 0) {
                     playerInteractEvent.setCancelled(true);
                     player.launchProjectile(Fireball.class, player.getEyeLocation().getDirection());
-                    hand.setAmount(hand.getAmount() - 1);
-                    player.setItemInHand(hand);
+                    itemInHand.setAmount(itemInHand.getAmount() - 1);
+                    player.setItemInHand(itemInHand);
                     setFireballCooldown(player, gameSetting.getFireballCooldown());
                 } else {
                     player.sendMessage(formatMessage(getLanguage().getFireballCoolingDownMessage(), ImmutableMap.of("%s", String.valueOf(fireballCooldown))));
                 }
 
             }
-            if (hand.getType() == Material.EGG) {
+            if (itemInHand.getType() == Material.EGG) {
                 playerInteractEvent.setCancelled(true);
                 BedwarsEgg.shoot(player.getWorld(), player, getPlayerTeam(player).getTeamMeta());
-                hand.setAmount(hand.getAmount() - 1);
-                player.setItemInHand(hand);
+                itemInHand.setAmount(itemInHand.getAmount() - 1);
+                player.setItemInHand(itemInHand);
             }
 
-            if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK && hand.getType() == Material.MONSTER_EGG && hand.getDurability() == 68) {
+            if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK && itemInHand.getType() == Material.MONSTER_EGG && itemInHand.getDurability() == 68) {
                 playerInteractEvent.setCancelled(true);
                 new BedwarsGolem(((CraftWorld) player.getWorld()).getHandle(), getPlayerTeam(player)).spawnEntity(playerInteractEvent.getClickedBlock().getLocation().add(0, 1, 0));
-                hand.setAmount(hand.getAmount() - 1);
-                player.setItemInHand(hand);
+                itemInHand.setAmount(itemInHand.getAmount() - 1);
+                player.setItemInHand(itemInHand);
             }
         }
     }
