@@ -97,6 +97,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     public void onEnable() {
         PixelBedwars.pixelBedwars = this;
         if (new File(getDataFolder(), "rejoin.options").exists()) {
+            initDatabase();
             MainCommandSpec.newBuilder()
                     .addAlias("rejoin")
                     .addAlias("rj")
