@@ -1,6 +1,7 @@
 package com.github.timmyovo.pixelbedwars.shop;
 
 import com.github.timmyovo.pixelbedwars.PixelBedwars;
+import com.github.timmyovo.pixelbedwars.database.PlayerQuickShopEntryModel;
 import com.github.timmyovo.pixelbedwars.game.BedwarsGame;
 import com.github.timmyovo.pixelbedwars.shop.category.ShopCategory;
 import com.github.timmyovo.pixelbedwars.shop.item.ShopItem;
@@ -36,13 +37,13 @@ public class ShopGui implements Listener {
         this.shop = shop;
         this.bedwarsGame = PixelBedwars.getPixelBedwars().getBedwarsGame();
         this.inventory = Bukkit.createInventory(null, 54, shop.getDisplayName());
-        applyCategory();
         for (int i = 0; i < 9; i++) {
             inventory.setItem(i + 9, new ItemStack(Material.STAINED_GLASS_PANE));
         }
     }
 
-    private void applyCategory() {
+    protected void applyCategory(Player player) {
+        inventory.clear();
         shop.getCategoryItems().forEach((i, shopCategory) -> {
             ItemStack categoryItem = shopCategory.getIcon().toItemStack();
             net.minecraft.server.v1_8_R3.ItemStack nmsCopy = CraftItemStack.asNMSCopy(categoryItem);
@@ -52,15 +53,23 @@ public class ShopGui implements Listener {
             nmsCopy.getTag().setString(CATEGORY_KEY, shopCategory.toString());
             inventory.setItem(i, CraftItemStack.asBukkitCopy(nmsCopy));
         });
-        shop.getCategoryItems().get(0).applyToInventory(inventory);
+        ShopCategory shopCategory = shop.getCategoryItems().get(0);
+        PlayerQuickShopEntryModel.db().find(PlayerQuickShopEntryModel.class)
+                .where()
+                .eq("owner", player.getUniqueId())
+                .findList()
+                .forEach(playerQuickShopEntryModel -> {
+                    shopCategory.getShopItemMap().put(playerQuickShopEntryModel.getSlotId(), ShopItem.fromString(playerQuickShopEntryModel.getShopItem()));
+                });
+        shopCategory.applyToInventory(inventory);
     }
 
     public void show(Player gamePlayer) {
-        applyCategory();
+        applyCategory(gamePlayer);
         gamePlayer.openInventory(inventory);
     }
 
-    private void notifyClick(InventoryClickEvent inventoryClickEvent) {
+    protected void notifyClick(InventoryClickEvent inventoryClickEvent) {
         Player player = (Player) inventoryClickEvent.getWhoClicked();
         ItemStack currentItem = inventoryClickEvent.getCurrentItem();
         if (currentItem == null) {
@@ -76,15 +85,22 @@ public class ShopGui implements Listener {
         }
         if (tag.hasKey(CATEGORY_KEY)) {
             ShopCategory shopCategory = ShopCategory.fromString(tag.getString(CATEGORY_KEY));
+
             shopCategory.applyToInventory(inventory);
             return;
         }
         if (tag.hasKey(SHOP_ITEM_KEY)) {
-            if (inventoryClickEvent.isShiftClick()) {
 
-            }
             String string = tag.getString(SHOP_ITEM_KEY);
             ShopItem shopItem = ShopItem.fromString(string);
+            if (inventoryClickEvent.isShiftClick()) {
+                new ConfigQuickShopGui(shopItem).show(player);
+                return;
+            } else if (inventoryClickEvent.isRightClick()) {
+                PlayerQuickShopEntryModel.setPlayerQuickShopEntry(player.getUniqueId(), inventoryClickEvent.getSlot(), null);
+                applyCategory(player);
+                return;
+            }
             shopItem.requestBuyItem(player);
         }
     }

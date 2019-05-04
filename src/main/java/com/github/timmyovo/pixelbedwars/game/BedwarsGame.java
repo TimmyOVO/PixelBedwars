@@ -116,6 +116,13 @@ public class BedwarsGame implements Listener {
         player.getInventory().addItem(itemStack);
     }
 
+    public static void sendToServer(Player player, String serverName) {
+        ByteArrayDataOutput byteArrayDataOutput = ByteStreams.newDataOutput();
+        byteArrayDataOutput.writeUTF("Connect");
+        byteArrayDataOutput.writeUTF(serverName);
+        player.sendPluginMessage(PixelBedwars.getPixelBedwars(), "BungeeCord", byteArrayDataOutput.toByteArray());
+    }
+
     public BedwarsGame loadGame(GameSetting gameSetting) {
         this.gameState = GameState.LOADING;
         this.gameSetting = gameSetting;
@@ -341,13 +348,6 @@ public class BedwarsGame implements Listener {
                 }
             }
         }
-    }
-
-    public static void sendToServer(Player player, String serverName) {
-        ByteArrayDataOutput byteArrayDataOutput = ByteStreams.newDataOutput();
-        byteArrayDataOutput.writeUTF("Connect");
-        byteArrayDataOutput.writeUTF(serverName);
-        player.sendPluginMessage(PixelBedwars.getPixelBedwars(), "BungeeCord", byteArrayDataOutput.toByteArray());
     }
 
     public void calStatistic() {
