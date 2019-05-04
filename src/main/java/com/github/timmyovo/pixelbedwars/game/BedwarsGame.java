@@ -1171,6 +1171,9 @@ public class BedwarsGame implements Listener {
     }
 
     public void sendMessage(Player gamePlayer, String string, @Nullable Map<String, String> map) {
+        if (string == null || string.isEmpty()) {
+            string = "CAN_NOT_FIND_LOCALE";
+        }
         gamePlayer.sendMessage(formatMessage(PlaceholderAPI.setPlaceholders(gamePlayer, string), map));
     }
 
