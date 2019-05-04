@@ -29,17 +29,15 @@ import org.bukkit.inventory.ItemStack;
 public class ShopGui implements Listener {
     public static final String SHOP_ITEM_KEY = "SHOP_ITEM";
     public static final String CATEGORY_KEY = "CATEGORY";
-    private PlayerShop shop;
-    private BedwarsGame bedwarsGame;
-    private Inventory inventory;
+    protected PlayerShop shop;
+    protected BedwarsGame bedwarsGame;
+    protected Inventory inventory;
 
     public ShopGui(PlayerShop shop) {
         this.shop = shop;
         this.bedwarsGame = PixelBedwars.getPixelBedwars().getBedwarsGame();
         this.inventory = Bukkit.createInventory(null, 54, shop.getDisplayName());
-        for (int i = 0; i < 9; i++) {
-            inventory.setItem(i + 9, new ItemStack(Material.STAINED_GLASS_PANE));
-        }
+
     }
 
     protected void applyCategory(Player player) {
@@ -53,7 +51,7 @@ public class ShopGui implements Listener {
             nmsCopy.getTag().setString(CATEGORY_KEY, shopCategory.toString());
             inventory.setItem(i, CraftItemStack.asBukkitCopy(nmsCopy));
         });
-        ShopCategory shopCategory = shop.getCategoryItems().get(0);
+        ShopCategory shopCategory = shop.getCategoryItems().get(0).clone();
         PlayerQuickShopEntryModel.db().find(PlayerQuickShopEntryModel.class)
                 .where()
                 .eq("owner", player.getUniqueId())
@@ -62,6 +60,9 @@ public class ShopGui implements Listener {
                     shopCategory.getShopItemMap().put(playerQuickShopEntryModel.getSlotId(), ShopItem.fromString(playerQuickShopEntryModel.getShopItem()));
                 });
         shopCategory.applyToInventory(inventory);
+        for (int i = 0; i < 9; i++) {
+            inventory.setItem(i + 9, new ItemStack(Material.STAINED_GLASS_PANE));
+        }
     }
 
     public void show(Player gamePlayer) {
@@ -94,7 +95,9 @@ public class ShopGui implements Listener {
             String string = tag.getString(SHOP_ITEM_KEY);
             ShopItem shopItem = ShopItem.fromString(string);
             if (inventoryClickEvent.isShiftClick()) {
-                new ConfigQuickShopGui(shopItem).show(player);
+                ConfigQuickShopGui configQuickShopGui = PixelBedwars.getPixelBedwars().getConfigQuickShopGui();
+                configQuickShopGui.setPlayerShopItem(player, shopItem);
+                configQuickShopGui.show(player);
                 return;
             } else if (inventoryClickEvent.isRightClick()) {
                 PlayerQuickShopEntryModel.setPlayerQuickShopEntry(player.getUniqueId(), inventoryClickEvent.getSlot(), null);

@@ -20,6 +20,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Data
@@ -66,6 +67,48 @@ public class ResourceSpawner {
                         .build();
                 this.hologramIcon = Material.EMERALD_BLOCK;
                 this.hologramTexts = Lists.newArrayList();
+                break;
+        }
+    }
+
+    public ResourceSpawner(int spawnInterval, VecLoc3D spawnerLocation, SpawnerType spawnerType, boolean enableHolgram) {
+        this.spawnInterval = spawnInterval;
+        this.spawnerLocation = spawnerLocation;
+        this.multiplier = 1;
+        switch (spawnerType) {
+            case IRON:
+                this.itemToSpawn = InventoryItem.builder()
+                        .itemstackData(new ItemStack(org.bukkit.Material.IRON_INGOT).serialize())
+                        .build();
+                break;
+            case GOLD:
+                this.itemToSpawn = InventoryItem.builder()
+                        .itemstackData(new ItemStack(org.bukkit.Material.GOLD_INGOT).serialize())
+                        .build();
+                break;
+            case DIAMOND:
+                this.itemToSpawn = InventoryItem.builder()
+                        .itemstackData(new ItemStack(org.bukkit.Material.DIAMOND).serialize())
+                        .build();
+                if (enableHolgram) {
+                    this.hologramIcon = Material.DIAMOND_BLOCK;
+                    this.hologramTexts = Arrays.asList("§a刷新钻石", "§e剩余时间:§b%s");
+                } else {
+                    this.hologramIcon = Material.AIR;
+                    this.hologramTexts = Lists.newArrayList();
+                }
+                break;
+            case EMERALD:
+                this.itemToSpawn = InventoryItem.builder()
+                        .itemstackData(new ItemStack(Material.EMERALD).serialize())
+                        .build();
+                if (enableHolgram) {
+                    this.hologramIcon = Material.EMERALD_BLOCK;
+                    this.hologramTexts = Arrays.asList("§a刷新绿宝石", "§e剩余时间:§b%s");
+                } else {
+                    this.hologramIcon = Material.AIR;
+                    this.hologramTexts = Lists.newArrayList();
+                }
                 break;
         }
     }

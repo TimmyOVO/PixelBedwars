@@ -64,4 +64,5 @@ public class Language {
     private String seizeIron;
     private String seizeGold;
     private String seizeEmerald;
+    private String quickShopConfigGuiName;
 }

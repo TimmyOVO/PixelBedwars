@@ -404,7 +404,7 @@ public class TeamShopGui implements Listener {
                     ShopItem.takeItem(player, inventoryItem1);
                     teamShoppingProperties.setTeamItemLevel(4, 2);
                     playerTeam.getTeamMeta().allSpawnerMultiplier(2);
-                    player.sendMessage("购买保护2成功");
+                    player.sendMessage("购买资源刷新2成功");
                 } else {
                     player.sendMessage("你没有足够的物品!");
                 }

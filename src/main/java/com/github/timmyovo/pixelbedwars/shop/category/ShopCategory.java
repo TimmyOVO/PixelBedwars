@@ -13,6 +13,7 @@ import org.bukkit.craftbukkit.v1_8_R3.inventory.CraftItemStack;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.github.timmyovo.pixelbedwars.shop.ShopGui.SHOP_ITEM_KEY;
@@ -21,7 +22,7 @@ import static com.github.timmyovo.pixelbedwars.shop.ShopGui.SHOP_ITEM_KEY;
 @NoArgsConstructor
 @Data
 @Builder
-public class ShopCategory {
+public class ShopCategory implements Cloneable {
     private InventoryItem icon;
     private Map<Integer, ShopItem> shopItemMap;
     private String requirePermission;
@@ -32,13 +33,20 @@ public class ShopCategory {
 
     public void applyToInventory(Inventory inventory) {
         if (getShopItemMap() == null) {
-            for (int i = 0; i < 18; i++) {
-                inventory.setItem(i + 17, new ItemStack(Material.AIR));
-            }
-            return;
+            setShopItemMap(new HashMap<>());
+        }
+        for (int i = 0; i < 18; i++) {
+            inventory.setItem(i + 17, new ItemStack(Material.AIR));
         }
         getShopItemMap().forEach((i1, shopItem) -> {
-            ItemStack itemStack = shopItem.getIcon().toItemStack();
+            if (shopItem == null) {
+                return;
+            }
+            InventoryItem icon = shopItem.getIcon();
+            if (icon == null) {
+                icon = new InventoryItem(new ItemStack(Material.AIR).serialize());
+            }
+            ItemStack itemStack = icon.toItemStack();
             net.minecraft.server.v1_8_R3.ItemStack asNMSCopy = CraftItemStack.asNMSCopy(itemStack);
             if (asNMSCopy == null) {
                 inventory.setItem(i1, new ItemStack(Material.AIR));
@@ -55,5 +63,10 @@ public class ShopCategory {
     @Override
     public String toString() {
         return FileUtils.GSON.toJson(this);
+    }
+
+    @Override
+    public ShopCategory clone() {
+        return new ShopCategory(getIcon(), shopItemMap, requirePermission);
     }
 }

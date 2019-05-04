@@ -10,6 +10,7 @@ import com.github.timmyovo.pixelbedwars.entity.*;
 import com.github.timmyovo.pixelbedwars.game.task.PlayerRespawnTask;
 import com.github.timmyovo.pixelbedwars.settings.GameSetting;
 import com.github.timmyovo.pixelbedwars.settings.Language;
+import com.github.timmyovo.pixelbedwars.settings.resource.ResourceSpawner;
 import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import com.github.timmyovo.pixelbedwars.shop.TeamShoppingProperties;
@@ -245,6 +246,7 @@ public class BedwarsGame implements Listener {
                 getTeamList().stream()
                         .map(GameTeam::getTeamMeta)
                         .forEach(TeamMeta::tickSpawner);
+                getGameSetting().tickSpawner();
                 getTrapList().forEach(Trap::tickTrap);
 
                 updateScoreboard();
@@ -596,7 +598,7 @@ public class BedwarsGame implements Listener {
             sendMessage(player, getLanguage().getCanNotBreakBlock(), new HashMap<>());
             return false;
         }
-        return canBreakBed(player, block);
+        return block.getType() != Material.BED_BLOCK || canBreakBed(player, block);
     }
 
     private boolean isBlockPlacedByHuman(Block block) {
@@ -776,10 +778,32 @@ public class BedwarsGame implements Listener {
                 .map(GameTeam::getTeamMeta)
                 .map(TeamMeta::getTeamGameLocation)
                 .map(VecLoc3D::toBukkitLocation)
-                .anyMatch(location -> location.distance(blockPlaced.getLocation()) <= 8)) {
+                .anyMatch(location -> location.distance(blockPlaced.getLocation()) <= gameSetting.getHomeBuildProtectRadius())) {
             blockPlaceEvent.setCancelled(true);
             return;
         }
+        if (combineList(getTeamList().stream()
+                        .map(GameTeam::getTeamMeta)
+                        .map(TeamMeta::getEmeraldSpawnerList).collect(Collectors.toList()),
+                getTeamList().stream()
+                        .map(GameTeam::getTeamMeta)
+                        .map(TeamMeta::getDiamondSpawnerList).collect(Collectors.toList()),
+                Collections.singletonList(getGameSetting().getIronSpawnerList()),
+                Collections.singletonList(getGameSetting().getGoldSpawnerList()),
+                Collections.singletonList(getGameSetting().getDiamondSpawnerList()),
+                Collections.singletonList(getGameSetting().getEmeraldSpawnerList())
+        )
+                .stream()
+                .map(resourceSpawners -> resourceSpawners.stream()
+                        .map(ResourceSpawner::getSpawnerLocation)
+                        .map(VecLoc3D::toBukkitLocation)
+                        .collect(Collectors.toList())
+                )
+                .anyMatch(locations -> locations.stream().anyMatch(location -> location.distance(blockPlaced.getLocation()) <= gameSetting.getSpawnerBuildProtectRadius()))) {
+            blockPlaceEvent.setCancelled(true);
+            return;
+        }
+
 
         markBlockBreakable(blockPlaceEvent.getBlock());
         if (hasPlayer(player) && gameState != GameState.GAMING) {
@@ -792,6 +816,14 @@ public class BedwarsGame implements Listener {
             tntPrimed.setFuseTicks(gameSetting.getTntExplodeDelay());
             location.getBlock().setType(Material.AIR);
         }
+    }
+
+    private <T> Collection<T> combineList(Collection<T>... ll) {
+        ArrayList<T> arrayList = new ArrayList<>();
+        for (Collection<T> ts : ll) {
+            arrayList.addAll(ts);
+        }
+        return arrayList;
     }
 
     @EventHandler
@@ -1273,17 +1305,20 @@ public class BedwarsGame implements Listener {
 
     public void callDeathMatch() {
         getTeamList().forEach(gameTeam -> {
-            Location location = getGameSetting().getPlayerRespawnWaitLocation().toBukkitLocation();
-            WorldServer worldServer = ((CraftWorld) location
-                    .getWorld()).getHandle();
-            if (gameTeam.getTeamShoppingProperties().isDoubleDragonEnable()) {
+            if (gameTeam.getAlivePlayers().size() > 0) {
+                Location location = getGameSetting().getPlayerRespawnWaitLocation().toBukkitLocation();
+                WorldServer worldServer = ((CraftWorld) location
+                        .getWorld()).getHandle();
+                if (gameTeam.getTeamShoppingProperties().isDoubleDragonEnable()) {
+                    BedwarsEnderDragon e = new BedwarsEnderDragon(worldServer, gameTeam);
+                    getBedwarsEnderDragons().add(e);
+                    e.spawnEntity(location);
+                }
                 BedwarsEnderDragon e = new BedwarsEnderDragon(worldServer, gameTeam);
                 getBedwarsEnderDragons().add(e);
                 e.spawnEntity(location);
             }
-            BedwarsEnderDragon e = new BedwarsEnderDragon(worldServer, gameTeam);
-            getBedwarsEnderDragons().add(e);
-            e.spawnEntity(location);
+
         });
     }
 
@@ -1327,12 +1362,20 @@ public class BedwarsGame implements Listener {
     public void onPlayerTargetOthers(PlayerInteractEvent playerInteractEvent) {
         Player player = playerInteractEvent.getPlayer();
         ItemStack itemInHand = player.getItemInHand();
+        Block clickedBlock = playerInteractEvent.getClickedBlock();
         if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK) {
             if (itemInHand != null && itemInHand.getType().name().contains("BUCKET")) {
                 if (getTeamList().stream()
-                        .anyMatch(gameTeam -> gameTeam.getTeamMeta().getTeamGameLocation().toBukkitLocation().distance(playerInteractEvent.getClickedBlock().getLocation()) <= 12)) {
+                        .anyMatch(gameTeam -> gameTeam.getTeamMeta().getTeamGameLocation().toBukkitLocation().distance(clickedBlock.getLocation()) <= gameSetting.getBucketBuildProtectRadius())) {
                     playerInteractEvent.setCancelled(true);
                 }
+            }
+            if (clickedBlock.getType() == Material.CHEST && getTeamList().stream()
+                    .map(GameTeam::getTeamMeta)
+                    .map(TeamMeta::getTeamGameLocation)
+                    .map(VecLoc3D::toBukkitLocation)
+                    .anyMatch(location -> location.distance(clickedBlock.getLocation()) <= gameSetting.getChestProtectRadius())) {
+                playerInteractEvent.setCancelled(true);
             }
         }
         if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_AIR || playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK) {
@@ -1361,7 +1404,7 @@ public class BedwarsGame implements Listener {
 
             if (playerInteractEvent.getAction() == Action.RIGHT_CLICK_BLOCK && itemInHand.getType() == Material.MONSTER_EGG && itemInHand.getDurability() == 68) {
                 playerInteractEvent.setCancelled(true);
-                new BedwarsGolem(((CraftWorld) player.getWorld()).getHandle(), getPlayerTeam(player)).spawnEntity(playerInteractEvent.getClickedBlock().getLocation().add(0, 1, 0));
+                new BedwarsGolem(((CraftWorld) player.getWorld()).getHandle(), getPlayerTeam(player)).spawnEntity(clickedBlock.getLocation().add(0, 1, 0));
                 itemInHand.setAmount(itemInHand.getAmount() - 1);
                 player.setItemInHand(itemInHand);
             }

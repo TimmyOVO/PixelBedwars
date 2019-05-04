@@ -14,6 +14,7 @@ import com.github.skystardust.ultracore.core.database.newgen.DatabaseManager;
 import com.github.skystardust.ultracore.core.exceptions.ConfigurationException;
 import com.github.skystardust.ultracore.core.exceptions.DatabaseInitException;
 import com.github.skystardust.ultracore.core.utils.FileUtils;
+import com.github.timmyovo.pixelbedwars.database.PlayerQuickShopEntryModel;
 import com.github.timmyovo.pixelbedwars.database.PlayerRejoinModel;
 import com.github.timmyovo.pixelbedwars.database.PlayerStatisticModel;
 import com.github.timmyovo.pixelbedwars.entity.BedwarsEgg;
@@ -30,12 +31,14 @@ import com.github.timmyovo.pixelbedwars.settings.resource.ResourceSpawner;
 import com.github.timmyovo.pixelbedwars.settings.stage.StageEntry;
 import com.github.timmyovo.pixelbedwars.settings.team.TeamMeta;
 import com.github.timmyovo.pixelbedwars.settings.title.TitleEntry;
+import com.github.timmyovo.pixelbedwars.shop.ConfigQuickShopGui;
 import com.github.timmyovo.pixelbedwars.shop.PlayerShop;
 import com.github.timmyovo.pixelbedwars.shop.ShopGui;
 import com.github.timmyovo.pixelbedwars.shop.TeamShopGui;
 import com.github.timmyovo.pixelbedwars.shop.category.ShopCategory;
 import com.github.timmyovo.pixelbedwars.shop.item.ShopItem;
 import com.github.timmyovo.pixelbedwars.trap.TrapGui;
+import com.github.timmyovo.pixelbedwars.utils.CommandsHelp;
 import com.github.timmyovo.pixelbedwars.utils.NMSUtils;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -46,11 +49,7 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 import lombok.Getter;
 import lombok.Setter;
-import net.minecraft.server.v1_8_R3.EntityEnderDragon;
-import net.minecraft.server.v1_8_R3.WorldServer;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -80,6 +79,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
     private Language language;
     private PlayerShop playerShop;
     private ShopGui playerShopGui;
+    private ConfigQuickShopGui configQuickShopGui;
     private PlayerShop teamShop;
     private TeamShopGui teamShopGui;
     private BedwarsGame bedwarsGame;
@@ -194,6 +194,8 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
         Bukkit.getPluginManager().registerEvents(playerShopGui, this);
         teamShopGui = new TeamShopGui();
         Bukkit.getPluginManager().registerEvents(teamShopGui, this);
+        configQuickShopGui = new ConfigQuickShopGui(playerShop);
+        Bukkit.getPluginManager().registerEvents(configQuickShopGui, this);
         Bukkit.getPluginManager().registerEvents(new TrapGui(), this);
         InventoryBuilder inventoryBuilder = InventoryBuilder.builder()
                 .displayName("队伍选择")
@@ -238,7 +240,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
             DatabaseManager gamebattle_database = DatabaseManager.newBuilder()
                     .withName("gamebattle_database")
                     .withOwnerPlugin(this)
-                    .withModelClass(Arrays.asList(PlayerStatisticModel.class, PlayerRejoinModel.class))
+                    .withModelClass(Arrays.asList(PlayerStatisticModel.class, PlayerRejoinModel.class, PlayerQuickShopEntryModel.class))
                     .withSqlConfiguration(sqlConfiguration)
                     .build();
             gamebattle_database
@@ -525,6 +527,14 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
         configurationManager.registerConfiguration("gameSetting", () -> {
             VecLoc3D defaultLocation = VecLoc3D.valueOf(defaultWorld.getSpawnLocation());
             return GameSetting.builder()
+                    .chestProtectRadius(8)
+                    .ironSpawnerList(Lists.newArrayList())
+                    .goldSpawnerList(Lists.newArrayList())
+                    .diamondSpawnerList(Lists.newArrayList())
+                    .emeraldSpawnerList(Lists.newArrayList())
+                    .bucketBuildProtectRadius(10)
+                    .homeBuildProtectRadius(10)
+                    .spawnerBuildProtectRadius(8)
                     .fireballExplodePower(10)
                     .tntExplodePower(10)
                     .fireballCooldown(0.5F)
@@ -569,19 +579,19 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                     .stageName("绿宝石生成Ⅰ阶段")
                                     .stageCounter(5)
                                     .flow(1)
-                                    .stageCommand("pb strrs EMERALD 2")
+                                    .stageCommand("pb srrs EMERALD 2")
                                     .build(),
                             StageEntry.builder()
                                     .stageName("绿宝石生成Ⅱ阶段")
                                     .stageCounter(120)
                                     .flow(2)
-                                    .stageCommand("pb strrs EMERALD 3")
+                                    .stageCommand("pb srrs EMERALD 3")
                                     .build(),
                             StageEntry.builder()
                                     .stageName("绿宝石生成Ⅲ阶段")
                                     .stageCounter(300)
                                     .flow(3)
-                                    .stageCommand("pb strrs EMERALD 5")
+                                    .stageCommand("pb srrs EMERALD 5")
                                     .build(),
                             StageEntry.builder()
                                     .stageName("所有床自毁")
@@ -650,6 +660,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                     .build();
         })
                 .registerConfiguration("language", () -> Language.builder()
+                        .quickShopConfigGuiName("配置快捷购买")
                         .seizeIron("+%s个铁锭")
                         .seizeGold("+%s个金锭")
                         .seizeDiamond("+%s个钻石")
@@ -763,6 +774,24 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         })
                         .build())
                 .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("srrs")
+                        .addAlias("setResourceRefreshSpeed")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (strings.length == 2) {
+                                try {
+                                    getBedwarsGame().getGameSetting().setResourceSpawnerMultiplier(ResourceSpawner.SpawnerType.valueOf(strings[0]), Integer.valueOf(strings[1]));
+                                } catch (NumberFormatException m) {
+                                    commandSender.sendMessage("请输入数字");
+                                } catch (EnumConstantNotPresentException n) {
+                                    commandSender.sendMessage("无法找到指定资源");
+                                }
+                                return true;
+                            }
+                            commandSender.sendMessage("/pb setResourceRefreshSpeed [资源名称] [资源刷新乘数]");
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
                         .addAlias("strrs")
                         .addAlias("setTeamResourceRefreshSpeed")
                         .withCommandSpecExecutor((commandSender, strings) -> {
@@ -795,15 +824,6 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             } catch (EnumConstantNotPresentException n) {
                                 commandSender.sendMessage("无法找到指定资源");
                             }
-                            Player player = (Player) commandSender;
-                            WorldServer handle = ((CraftWorld) player.getWorld()).getHandle();
-                            Location l1 = player.getLocation();
-                            EntityEnderDragon entityEnderDragon = new EntityEnderDragon(handle);
-                            entityEnderDragon.setPosition(l1.getX(), l1.getY(), l1.getZ());
-                            handle.addEntity(entityEnderDragon);
-                            Bukkit.getScheduler().runTaskTimerAsynchronously(getPixelBedwars(), () -> {
-                                entityEnderDragon.target = ((CraftPlayer) player).getHandle();
-                            }, 0L, 1L);
                             return true;
                         })
                         .build())
@@ -923,8 +943,45 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                             if (!(commandSender instanceof Player)) {
                                 return true;
                             }
+                            if (strings.length < 2) {
+                                commandSender.sendMessage("/pb addSpawner [资源名称] [刷新间隔(秒)]");
+                                return true;
+                            }
+                            try {
+                                Player player = (Player) commandSender;
+                                ResourceSpawner.SpawnerType spawnerType = ResourceSpawner.SpawnerType.valueOf(strings[0].toUpperCase());
+                                ResourceSpawner resourceSpawner = new ResourceSpawner(Integer.valueOf(strings[1]), VecLoc3D.valueOf(player.getLocation()), spawnerType);
+                                switch (spawnerType) {
+                                    case IRON:
+                                        gameSetting.getIronSpawnerList().add(resourceSpawner);
+                                        break;
+                                    case GOLD:
+                                        gameSetting.getGoldSpawnerList().add(resourceSpawner);
+                                        break;
+                                    case DIAMOND:
+                                        gameSetting.getDiamondSpawnerList().add(resourceSpawner);
+                                        break;
+                                    case EMERALD:
+                                        gameSetting.getEmeraldSpawnerList().add(resourceSpawner);
+                                        break;
+                                }
+                                save();
+                                commandSender.sendMessage("成功!");
+                            } catch (NullPointerException e) {
+                                e.printStackTrace();
+                            }
+                            return true;
+                        })
+                        .build())
+                .childCommandSpec(SubCommandSpec.newBuilder()
+                        .addAlias("addSpawnerTeam")
+                        .addAlias("ast")
+                        .withCommandSpecExecutor((commandSender, strings) -> {
+                            if (!(commandSender instanceof Player)) {
+                                return true;
+                            }
                             if (strings.length < 3) {
-                                commandSender.sendMessage("/pb addSpawner [队伍名称] [资源名称] [刷新间隔(秒)]");
+                                commandSender.sendMessage("/pb addSpawnerTeam [队伍名称] [资源名称] [刷新间隔(秒)]");
                                 return true;
                             }
                             try {
@@ -993,7 +1050,6 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                     String s = FileUtils.GSON.toJson(InventoryItem.builder()
                                             .itemstackData(itemInHand.serialize())
                                             .build());
-                                    System.out.println(s);
                                     player.sendMessage(s);
                                 }
                             } catch (NullPointerException e) {
@@ -1070,8 +1126,11 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                 commandSender.sendMessage("未找到指定分类");
                                 return true;
                             }
-
-                            ShopItem shopItem = shopCategory.getShopItemMap().get(Integer.valueOf(strings[1]));
+                            if (shopCategory.getShopItemMap() == null) {
+                                shopCategory.setShopItemMap(new HashMap<>());
+                            }
+                            Integer slotid = Integer.valueOf(strings[1]);
+                            ShopItem shopItem = shopCategory.getShopItemMap().get(slotid);
                             if (shopItem == null) {
                                 shopItem = ShopItem.builder()
                                         .icon(InventoryItem.builder()
@@ -1084,7 +1143,6 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                                 .itemstackData(new ItemStack(Material.WOOL).serialize())
                                                 .build()))
                                         .build();
-                                return true;
                             }
 
                             ItemStack itemInHand = player.getInventory().getItemInHand();
@@ -1092,6 +1150,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                                 shopItem.setIcon(InventoryItem.builder()
                                         .itemstackData(itemInHand.serialize())
                                         .build());
+                                shopCategory.getShopItemMap().put(slotid, shopItem);
                                 save();
                                 player.sendMessage("成功!");
                             } else {
@@ -1192,7 +1251,7 @@ public final class PixelBedwars extends JavaPlugin implements PluginInstance {
                         })
                         .build())
                 .withCommandSpecExecutor((commandSender, strings) -> {
-
+                    CommandsHelp.help(commandSender);
                     return true;
                 })
                 .build()
