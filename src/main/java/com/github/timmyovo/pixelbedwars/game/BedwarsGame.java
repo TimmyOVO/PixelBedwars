@@ -27,10 +27,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.minecraft.server.v1_8_R3.*;
-import org.bukkit.*;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
@@ -850,6 +850,18 @@ public class BedwarsGame implements Listener {
         }
     }
 
+    @EventHandler
+    public void onSnowballHit(ProjectileHitEvent projectileHitEvent) {
+        if (!(projectileHitEvent.getEntity() instanceof Snowball)) {
+            return;
+        }
+        if (!(projectileHitEvent.getEntity().getShooter() instanceof Player)) {
+            return;
+        }
+        Player shooter = (Player) projectileHitEvent.getEntity().getShooter();
+        new BedwarsGolem(((CraftWorld) shooter.getWorld()).getHandle(), getPlayerTeam(shooter)).spawnEntity(projectileHitEvent.getEntity().getLocation().add(0, 2, 0));
+    }
+
 
     @EventHandler
     public void onPlayerDamage(EntityDamageEvent entityDamageEvent) {
@@ -1023,11 +1035,16 @@ public class BedwarsGame implements Listener {
             corpsesManager.removeCorpse(corpseData);
             playerCorpseDataMap.remove(player.getUniqueId());
         }
-        getBedwarsPlayer(player).setRespawning(false);
+        GamePlayer bedwarsPlayer = getBedwarsPlayer(player);
+        bedwarsPlayer.setRespawning(false);
         clearPlayerInventory(player);
         GameTeam playerTeam = getPlayerTeam(player);
         playerTeam.getTeamShoppingProperties().notifyTeamEquipmentChange(playerTeam);
         addDefaultWeapon(player.getPlayer());
+        bedwarsPlayer.downGradeAxe();
+        bedwarsPlayer.downGradePickaxe();
+        bedwarsPlayer.giveAxe();
+        bedwarsPlayer.givePickaxe();
     }
 
     public Location randomLocation(VecLoc3D respawnRegionStartLocation, VecLoc3D respawnRegionEndLocation) {

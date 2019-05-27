@@ -99,9 +99,33 @@ public class ShopItem {
             }
         }
         if (hasEnoughItems(gamePlayer, requireItem)) {
+            if (!items.stream()
+                    .map(InventoryItem::toItemStack)
+                    .filter(TeamShoppingProperties::isAxe)
+                    .allMatch(itemStack -> gamePlayer.canUpGradeAxe())) {
+                //不满足购买条件
+                return;
+            }
+            if (!items.stream()
+                    .map(InventoryItem::toItemStack)
+                    .filter(TeamShoppingProperties::isPickaxe)
+                    .allMatch(itemStack -> gamePlayer.canUpGradePickaxe())) {
+                //不满足购买条件
+                return;
+            }
             if (takeItem(gamePlayer, requireItem)) {
                 items.forEach(inventoryItem1 -> {
                     ItemStack itemStack = inventoryItem1.toItemStack();
+                    if (TeamShoppingProperties.isAxe(itemStack)) {
+                        gamePlayer.upGradeAxe();
+                        gamePlayer.giveAxe();
+                        return;
+                    }
+                    if (TeamShoppingProperties.isPickaxe(itemStack)) {
+                        gamePlayer.upGradePickaxe();
+                        gamePlayer.givePickaxe();
+                        return;
+                    }
                     if (itemStack.getType() == Material.WOOL) {
                         GameTeam playerTeam = PixelBedwars.getPixelBedwars().getBedwarsGame().getPlayerTeam(gamePlayer);
                         ItemStack wool = playerTeam.getTeamMeta().getWool();

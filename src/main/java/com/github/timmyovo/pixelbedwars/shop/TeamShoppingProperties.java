@@ -4,6 +4,7 @@ import com.github.timmyovo.pixelbedwars.game.GameTeam;
 import com.github.timmyovo.pixelbedwars.shop.config.EnchantmentEntry;
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -42,6 +43,14 @@ public class TeamShoppingProperties {
 
     public static boolean isSword(ItemStack itemStack) {
         return itemStack.getType().name().contains("SWORD") || itemStack.getType().name().contains("AXE");
+    }
+
+    public static boolean isAxe(ItemStack itemStack) {
+        return itemStack.getType() == Material.WOOD_AXE || itemStack.getType() == Material.IRON_AXE || itemStack.getType() == Material.GOLD_AXE || itemStack.getType() == Material.DIAMOND_AXE;
+    }
+
+    public static boolean isPickaxe(ItemStack itemStack) {
+        return itemStack.getType().name().contains("PICKAXE");
     }
 
     public Integer getTeamItemLevelById(int i) {//0 没买
